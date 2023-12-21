@@ -1,6 +1,8 @@
-const num = 2000
+module.exports = {
+    host:'localhost',
+    port:'3306',
+    user:'stageus',
+    password:'1234',
+    database:'project'
+};
 
-const num2 = 1
-
-
-Math.random()

@@ -1,25 +1,26 @@
+
 const express = require('express');
 const session = require("express-session");
 
+
+require('dotenv').config();
+const { secretCode, port } = process.env; // .env로부터 환경변수 불러오기
 const app = express();
-const port = 8000;
 
 app.use(session({
-    resave: false,
-    saveUninitialized: false,
-    secret: "secret",
-    cookie: {
-        httpOnly: true,
-        secure: false,
-    },
+    resave:false,
+    saveUninitialized:false,
+    secret: secretCode
 }));
+
+app.use(express.json());
 
 //최대한 분할해서 커밋하기
 //노드 세션적용하기
 
 //페이지api
-const pageApi = require("./src/routers/page")
-app.use("/",pageApi)
+const pageApi = require("./src/routers/page");
+app.use("/", pageApi);
 
 //계정api
 const accountApi = require("./src/routers/account");
@@ -27,11 +28,11 @@ app.use("/account", accountApi);
 
 //게시글 api
 const articleApi = require("./src/routers/article");
-app.use("/article",articleApi);
+app.use("/article", articleApi);
 
 //댓글 api
 const commentApi = require("./src/routers/comment");
-app.use("/comment",commentApi);
+app.use("/comment", commentApi);
 
 
 app.listen(port, () => {
