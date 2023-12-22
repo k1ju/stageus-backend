@@ -1,8 +1,9 @@
 const router = require("express").Router();
 const session = require("express-session");
+const mysql = require("mysql");
+const dbconfig = require("../../config/db.js");
 require('dotenv').config();
-const secretCode = process.env;
-
+const secretCode = process.env.secretCode;
 router.use(session({
     resave:false,
     saveUninitialized:false,

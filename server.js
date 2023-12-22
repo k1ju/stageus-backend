@@ -1,8 +1,6 @@
 
 const express = require('express');
 const session = require("express-session");
-
-
 require('dotenv').config();
 const { secretCode, port } = process.env; // .env로부터 환경변수 불러오기
 const app = express();

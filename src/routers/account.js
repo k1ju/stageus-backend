@@ -1,9 +1,9 @@
 
 const router = require("express").Router();
+const regexPattern = require("../modules/regexPattern.js");
 const session = require("express-session");
 const mysql = require('mysql');
-const dbconfig = require('../db.js');
-// const conn = mysql.createConnection(dbconfig);
+const dbconfig = require('../../config/db.js');
 
 require('dotenv').config();
 const secretCode = process.env.secretCode; // .env로부터 환경변수 불러오기
@@ -12,7 +12,7 @@ const secretCode = process.env.secretCode; // .env로부터 환경변수 불러�
 router.use(session({
     resave: false,
     saveUninitialized: false,
-    secret: secretCode  //secretCode를 외부에서 알기 어려워짐
+    secret: secretCode  //secretCode보안
 }));
 
 // 회원가입 api
@@ -22,50 +22,36 @@ router.post('/', (req, res) => {
         "success": false,
         "message": ""
     };
-    const query = `INSERT INTO account(id, pw, name, phonenumber,birth) VALUES (?,?,?,?,?)`;
-    const values = [userID, userPw, userName, userPhonenumber, userBirth];
-    const userIDRegex = /^\w[\w\d!@#$%^&*()_+{}|:"<>?/-]{1,19}$/;
-    const userPwRegex = /^(?=.*\w)(?=.*\d)(?=.*[!@#$%^&*()_+{}|:"<>?/-]).{1,20}$/;
-    const userNameRegex = /^[가-힣]{2,5}$/;
-    const userPhonenumberRegex = /^[0-9]{10,12}$/;
-    const userBirthRegex = /^[\d]{4}-[\d]{2}-[\d]{2}$/
 
     try {
-        if (!userID?.trim() || !userPw?.trim() || !userPwCheck?.trim() || !userName?.trim() || !userPhonenumber?.trim() || !userBirth?.trim()) { // 널값이라면
-            throw new Error("빈값이 존재해요");
-        }
-        if (!userIDRegex.test(userID)) {
-            throw new Error("id형식이 맞지않음");
-        }
-        if (!userPwRegex.test(userPw)) {
-            throw new Error("비번 글자제한");
-        }
-        if (!userNameRegex.test(userName)) {
-            throw new Error("이름 글자제한 2~5글자");
-        }
-        if (!userPhonenumberRegex.test(userPhonenumber)) {
-            throw new Error("전화번호 형식제한 숫자 10~12글자");
-        }
-        if (!userBirthRegex.test(userBirth)) {
-            throw new Error("생일형식 불일치")
-        }
-        if (userPw != userPwCheck) {
-            throw new Error("비밀번호확인 불일치");
-        }
+        if (!userID?.trim() || !userPw?.trim() || !userPwCheck?.trim() || !userName?.trim() || !userPhonenumber?.trim() || !userBirth?.trim()) throw new Error("빈값이 존재해요");
+        if (!regexPattern.userIDRegex.test(userID)) throw new Error("id형식이 맞지않음");
+        if (!regexPattern.userPwRegex.test(userPw)) throw new Error("비번 형식맞지않음");
+        if (!regexPattern.userNameRegex.test(userName)) throw new Error("이름 글자제한 2~5글자");
+        if (!regexPattern.userPhonenumberRegex.test(userPhonenumber)) throw new Error("전화번호 형식제한 숫자 10~12글자");
+        if (!regexPattern.userBirthRegex.test(userBirth)) throw new Error("생일형식 불일치")
+        if (userPw != userPwCheck) throw new Error("비밀번호확인 불일치");
 
-        conn.query(query, values, (err) => {
-            if (err) {
-                console.log(err);
-                throw new Error(err);
+        const sql = `INSERT INTO account(id, pw, name, phonenumber,birth) VALUES (?,?,?,?,?)`;
+        const values = [userID, userPw, userName, userPhonenumber, userBirth];
+        const conn = mysql.createConnection(dbconfig);  // db연결 api내에서
+
+        conn.query(sql, values, (err) => {
+            try {
+                if (err) throw new Error(err);
+                result.success = true;
+                result.message = "회원가입성공";
+            } catch (e) {
+                result.message = e.message;
+            } finally {
+                res.send(result);
+                conn.end();
             }
         });
-        result.success = true;
-        result.message = "회원가입성공";
+
     } catch (e) {
         result.message = e.message;
-    } finally {
         res.send(result);
-        conn.end();
     }
 })
 
@@ -78,31 +64,29 @@ router.get("/login", (req, res) => {
     };
 
     try {
-        //정규식 별도파일로빼기
-        const userIDRegex = /^\w[\w\d!@#$%^&*()_+{}|:"<>?/-]{1,19}$/;
-        const userPwRegex = /^(?=.*\w)(?=.*\d)(?=.*[!@#$%^&*()_+{}|:"<>?/-]).{1,20}$/;
 
+        //if문 한줄로 줄이기
         if (!userID?.trim() || !userPw?.trim()) throw new Error("빈값이 존재해요")
-        if (!userIDRegex.test(userID)) throw new Error("아이디 글자제한")
-        if (!userPwRegex.test(userPw)) throw new Error("비번 글자제한");
+        if (!regexPattern.userIDRegex.test(userID)) throw new Error("아이디 글자제한")
+        if (!regexPattern.userPwRegex.test(userPw)) throw new Error("비번 글자제한");
 
         const conn = mysql.createConnection(dbconfig);
-        const query = "SELECT * FROM account WHERE id = ? AND pw = ?";
+        const sql = "SELECT * FROM account WHERE id = ? AND pw = ?";
         const values = [userID, userPw];
 
         //query메소드의 3번째인자의 함수는 콜백함수로, 비동기적으로 동작하는 함수이다
         //그래서 query문의 뒷부분까지 미리 실행되고나서, 콜백함수 실행된다.
         //함수구조를 바꾸어 동기적으로 작동하게끔 만들어준다.
-        conn.query(query, values, (err, rows) => { // 반환되는 rows는 배열이다.
+        conn.query(sql, values, (err, rs) => { // 반환되는 result는 배열이다.
             try {
                 if (err) throw new Error(err);
-                if (rows.length == 0) throw new Error("로그인정보없음");
+                if (result.length == 0) throw new Error("로그인정보없음");
 
-                console.log(rows);
-                req.session.idx = rows[0].idx;
-                req.session.name = rows[0].name;
-                req.session.phonenumber = rows[0].phonenumber;
-                req.session.birth = rows[0].birth;
+                console.log(result);
+                req.session.idx = rs[0].idx;
+                req.session.name = rs[0].name;
+                req.session.phonenumber = rs[0].phonenumber;
+                req.session.birth = rs[0].birth;
                 result.success = "true";
                 result.message = "로그인성공";
 
@@ -145,37 +129,37 @@ router.get("/idCheck", (req, res) => {
         "data":
             { isDuplicated: false }
     }
-    const query = `SELECT idx FROM account WHERE id = ? `;
-    const values = [userID];
-    const userIDRegex = /^\w[\w\d!@#$%^&*()_+{}|:"<>?/-]{1,19}$/;
 
     try {
-        if (!userID?.trim()) {
-            throw new Error("빈값이 존재해요");
-        }
-        if (!userIDRegex.test(userID)) {
-            throw new Error("아이디 글자제한");
-        }
+        if (!userID?.trim()) throw new Error("빈값이 존재해요");
+        if (!regexPattern.userIDRegex.test(userID)) throw new Error("아이디 글자제한");
 
-        conn.query(query, values, (err, rows) => { // 3번째인자 : 콜백함수 : <err:에러객체>, <rows:결과 배열>,<fields:쿼리 결과에 대한 필드 정보, 보통안씀>
-            if (err) {
-                throw new Error("db에러");
-            };
-            if (rows.length > 0) {
-                result.data.isDuplicated = true;
-                result.message = "중복된아이디";
-                console.log(rows);
-            } else {
+        const conn = mysql.createConnection(dbconfig);
+        const query = `SELECT idx FROM account WHERE id = ?`;
+        const values = [userID];
+
+        conn.query(sql, values, (err, rs) => { // 3번째인자 : 콜백함수 : <err:에러객체>, <result:결과 배열>,<fields:쿼리 결과에 대한 필드 정보, 보통안씀>
+
+            try {
+                if (err) throw new Error(err);
+                if (rs.length > 0) {
+                    result.data.isDuplicated = true;
+                    throw new Error("중복된 id");
+                }
                 result.success = true;
                 result.message = "사용가능한 id";
                 result.data.isDuplicated = false;
+
+            } catch (e) {
+                result.message = e.message;
+            } finally {
+                conn.end();
+                res.send(result); //쿼리문안에서 에러난경우
             }
         });
     } catch (e) {
         result.message = e.message;
-    } finally {
-        res.send(result);
-        conn.end();
+        res.send(result); //쿼리문밖에서 에러난경우
     }
 })
 
@@ -187,38 +171,34 @@ router.get("/id", (req, res) => {
         "message": "id찾기실패",
         "id": ""      //id도 반환해줘야함
     }
-    const userPhonenumberRegex = /^[0-9]{10,12}$/;
-    const userNameRegex = /^[가-힣]{2,5}$/;
-    const query = "SELECT id FROM account WHERE name = ? AND phonenumber = ?";
-    const values = [userName, userPhonenumber];
-    try {
-        if (!userName?.trim() || !userPhonenumber?.trim()) { // 널값이라면
-            throw new Error("빈값이 존재해요")
-        }
-        if (!userNameRegex.test(userName)) {
-            throw new Error("이름 글자제한 2~5글자");
-        }
-        if (!userPhonenumberRegex.test(userPhonenumber)) {
-            throw new Error("전화번호 형식제한 숫자 10~12글자");
-        }
 
-        conn.query(query, values, (err, rows) => {
-            if (err) {
-                throw new Error("db에러");
-            }
-            if (rows > 0) {
+    try {
+        if (!userName?.trim() || !userPhonenumber?.trim()) throw new Error("빈값이 존재해요");
+        if (!regexPattern.userNameRegex.test(userName)) throw new Error("이름 글자제한 2~5글자");
+        if (!regexPattern.userPhonenumberRegex.test(userPhonenumber)) throw new Error("전화번호 형식제한 숫자 10~12글자");
+
+        const conn = mysql.createConnection(dbconfig);
+        const sql = "SELECT id FROM account WHERE name = ? AND phonenumber = ?";
+        const values = [userName, userPhonenumber];
+
+        conn.query(sql, values, (err, rs) => {
+            try {
+                if (err) throw new Error(err);
+                if(result.length == 0) throw new Error("일치하는 id없음")
                 result.success = true;
                 result.message = "id찾기 성공";
-                result.id = rows.id;
+                result.id = rs[0].id;
+            } catch (e) {
+                result.message = e.message;
+            } finally {
+                conn.end();
+                res.send(result)
             }
         })
     } catch (e) {
         result.message = e.message;
-    } finally {
         res.send(result)
-        conn.end();
     }
-
 })
 //비밀번호찾기
 router.get("/pw", (req, res) => {
@@ -229,48 +209,39 @@ router.get("/pw", (req, res) => {
         "message": "pw찾기실패",
         "pw": ""
     }
-    const userIDRegex = /^\w[\w\d!@#$%^&*()_+{}|:"<>?/-]{1,19}$/;
-    const userNameRegex = /^[가-힣]{2,5}$/;
-    const userPhonenumberRegex = /^[0-9]{10,12}$/;
-    const query = "SELECT pw FROM account WHERE id = ? AND name = ? AND phonenumber = ?";
-    const values = [userID, userName, userPhonenumber];
 
     try {
-        if (!userID?.trim() || !userName?.trim() || !userPhonenumber?.trim()) { // 널값이라면
-            throw new Error("빈값이 존재해요")
-        }
-        if (!userIDRegex.test(userID)) {
-            throw new Error("id형식이 맞지않음")
-        }
-        if (!userNameRegex.test(userName)) {
-            throw new Error("이름 글자제한 2~5글자");
-        }
-        if (!userPhonenumberRegex.test(userPhonenumber)) {
-            throw new Error("전화번호 형식제한 숫자 10~12글자");
-        }
+        if (!userID?.trim() || !userName?.trim() || !userPhonenumber?.trim()) throw new Error("빈값이 존재해요")
+        if (!regexPattern.userIDRegex.test(userID)) throw new Error("id형식이 맞지않음")
+        if (!regexPattern.userNameRegex.test(userName)) throw new Error("이름 글자제한 2~5글자");
+        if (!regexPattern.userPhonenumberRegex.test(userPhonenumber)) throw new Error("전화번호 형식제한 숫자 10~12글자");
 
-        conn.query(query, values, (err, rows) => {
-            if (err) {
-                throw new Error("db에러");
-            }
-            if (rows > 0) {
+        const conn = mysql.createConnection(dbconfig);
+        const sql = "SELECT pw FROM account WHERE id = ? AND name = ? AND phonenumber = ?";
+        const values = [userID, userName, userPhonenumber];
+
+        conn.query(sql, values, (err, rs) => {
+            try{
+                if (err) throw new Error(err);
+                if(rs.length ==0 ) throw new Error("일치하는 pw없음")
                 result.success = true;
                 result.message = "pw찾기 성공";
-                result.pw = rows.pw;
+                result.pw = rs[0].pw;
+            }catch (e) {
+                result.message = e.message;
+            } finally{
+                res.send(result);
+                conn.end();
             }
         })
-
     } catch (e) {
         result.message = e.message;
-    } finally {
         res.send(result);
-        conn.end();
-
-    }
+    } 
 })
 //내정보보기
 router.get("/info/:idx", (req, res) => {
-    const { idx } = req.params;
+    const  idx = req.params.idx;
     //idx는 세션으로 받아오기 , body x
     //idx 유무 체크
     const result = {
@@ -284,43 +255,44 @@ router.get("/info/:idx", (req, res) => {
             "profile": ""
         }
     }
-    const query = "SELECT * FROM account WHERE idx = ?";
-    const values = [idx];
+
     try {
-        console.log(req.session.idx);
-        console.log(idx);
+        if (req.session.idx != idx) throw new Error("사용자idx 불일치")
 
-        if (req.session.idx != idx) { // 세션이다른경우
-            throw new Error("사용자idx 불일치")
-        }
+        const conn = mysql.createConnection(dbconfig);
+        const sql = "SELECT * FROM account WHERE idx = ?";
+        const values = [idx];
 
-        conn.query(query, values, (err, rows) => {
-            if (err) {
-                throw new Error("db에러");
-            }
-            if (rows > 0) {
-                console.log(rows)
+        conn.query(sql, values, (err, rs) => { //반환되는 result는 배열
+
+            try{
+                if (err) throw new Error(err);
+                if(rs.length ==0 ) throw new Error("일치하는 회원정보없음")
+                console.log(rs)
                 result.success = true;
                 result.message = "내정보 조회 성공";
-                result.data.name = rows.name;
-                result.data.phonenumber = rows.phonenumber;
-                result.data.birth = rows.birth;
-                result.data.signupDate = rows.signupDate;
-                result.data.profile = rows.profile;
+                result.data.name = rs[0].name;
+                result.data.phonenumber = rs[0].phonenumber;
+                result.data.birth = rs[0].birth;
+                result.data.signupDate = rs[0].signupDate;
+                result.data.profile = rs[0].profile;
+            }catch (e) {
+                result.message = e.message;
+            } finally{
+                res.send(result);
+                conn.end();
             }
         })
-
     } catch (e) {
         result.message = e.message;
-    } finally {
         res.send(result);
-        conn.end();
-    }
+    } 
 })
+
 //정보수정
 router.put("/:idx", (req, res) => {
     const { userName, userPhonenumber, birth, profile } = req.body;
-    const idx = req.params
+    const idx = req.params.idx;
     const result = {
         "success": false,
         "message": "수정실패",
@@ -331,73 +303,74 @@ router.put("/:idx", (req, res) => {
             "profile": ""
         }
     }
-    const query = "UPDATE FROM account SET name = ?, phonenumner = ?, birth = ?, profile = ? WHERE idx = ?";
-    const values = [userName, userPhonenumber, birth, profile, idx];
-    try {
-        if (req.session.idx !== idx) { // 세션이 널값이라면
-            throw new Error("사용자idx 불일치")
-        }
 
-        conn.query(query, values, (err, rows) => {
-            if (err) {
-                throw new Error("db에러");
-            }
-            if (rows > 0) {
-                console.log(rows)
+    try {
+
+        if (req.session.idx != idx) throw new Error("사용자idx 불일치")
+        const conn = mysql.createConnection(dbconfig);
+        const sql = "UPDATE account SET name = ?, phonenumber = ?, birth = ?, profile = ? WHERE idx = ?";
+        const values = [userName, userPhonenumber, birth, profile, idx];
+
+        conn.query(sql, values, (err, rs) => {
+            try{
+                if (err) throw new Error(err);
+                if(rs.length == 0 ) throw new Error("일치하는 회원정보없음")
+                console.log(rs)
                 result.success = true;
                 result.message = "내정보 조회 성공";
-                result.data.name = rows.name;
-                result.data.phonenumber = rows.phonenumber;
-                result.data.birth = rows.birth;
-                result.data.profile = rows.profile;
+                result.data.name = userName;
+                result.data.phonenumber = userPhonenumber;
+                result.data.birth = birth;
+                result.data.profile = profile;
+            }catch (e) {
+                result.message = e.message;
+            } finally{
+                res.send(result);
+                conn.end();
             }
         })
-
-    } catch {
+    } catch (e) {
         result.message = e.message;
-    } finally {
         res.send(result);
-        conn.end();
-    }
-});
+    } 
+})
+
 //회원탈퇴
 router.delete("/:idx", (req, res) => {
-
-    const idx = req.params;
+    const idx = req.params.idx;
     const result = {
         "success": false,
         "message": "실패",
     };
-    const query = "DELETE FROM account WHERE idx = ?";
-    const values = [idx];
+
     try {
 
-        if (req.session.idx !== idx) { // 세션이 널값이라면
-            throw new Error("사용자idx 불일치")
-        }
+        if (req.session.idx != idx) throw new Error("사용자idx 불일치")
 
-        conn.query(query, values, (err, rows) => {
-            if (err) {
-                throw new Error("db에러");
-            }
-            if (rows > 0) {
-                console.log(rows)
+        const conn = mysql.createConnection(dbconfig);
+        const sql = "DELETE FROM account WHERE idx = ?";
+        const values = [idx];
+
+        conn.query(sql, values, (err) => {
+
+            try{
+                if (err) throw new Error(err);
                 result.success = true;
                 result.message = "회원탈퇴 성공";
+            }catch (e) {
+                result.message = e.message;
+            } finally{
+                res.send(result);
+                conn.end();
             }
         })
-    } catch {
+    } catch (e) {
         result.message = e.message;
-    } finally {
         res.send(result);
-        conn.end();
-    }
+    } 
 })
-
+   
 module.exports = router;
-
-
-
 
 
 
