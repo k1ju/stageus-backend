@@ -25,7 +25,7 @@ router.get("/all", (req, res) => {
         //db통신
         // db연결객체 생성
         const conn = mysql.createConnection(dbconfig);
-        const sql = "SELECT a.idx, title, write_date, u.name FROM article a JOIN account u ON a.user_idx = u.idx ";
+        const sql = "SELECT a.idx, title, write_date, u.name FROM article a JOIN account u ON a.user_idx = u.idx ORDER BY write_date";
 
         conn.query(sql, (err, rs) => {
             try {
@@ -62,10 +62,7 @@ router.post("/:userIdx", (req, res) => {
     }
 
     try {
-        if (!req.session.idx) { // 세션이 널값이라면
-            throw new Error("세션없음")
-        };
-        //db통신
+        if (!req.session.idx) throw new Error("세션없음");
         const conn = mysql.createConnection(dbconfig);
         const sql = "INSERT INTO article(title,content,user_idx) VALUES (?,?,?) ";
         const values = [title, content, userIdx];
@@ -112,7 +109,7 @@ router.put("/:articleIdx", (req, res) => {
                 if (err) throw new Error("db에러");
 
                 result.success = true;
-                result.message = rs.affectedRows + "개 데이터 성공"; // rs.affectedRows : insert, update, delete 의 데이터 개수 반환
+                result.message = rs.affectedRows + "개 수정"; // rs.affectedRows : insert, update, delete 의 데이터 개수 반환
 
             } catch (e) {
                 result.message = e.message;
@@ -134,7 +131,6 @@ router.delete("/:articleIdx", (req, res) => {
         "success": false,
         "message": "실패"
     }
-
     try {
         if (!req.session.idx) throw new Error("세션없음")
         if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치")
@@ -145,10 +141,8 @@ router.delete("/:articleIdx", (req, res) => {
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
-
                 result.success = true;
-                result.message = rs.affectedRows + "개 데이터 성공"; // rs.affectedRows : insert, update, delete 의 데이터 개수 반환
-
+                result.message = rs.affectedRows + "개 삭제"; // rs.affectedRows : insert, update, delete 의 데이터 개수 반환
             } catch (e) {
                 result.message = e.message;
             } finally {
@@ -156,7 +150,6 @@ router.delete("/:articleIdx", (req, res) => {
                 res.send(result);
             }
         })
-
     } catch (e) {
         result.message = e.message;
         res.send(result);
@@ -170,7 +163,6 @@ router.get("/:articleIdx", (req, res) => {
         "message": "실패",
         "data": []
     }
-
     try {
         const sql = "SELECT a.idx, a.title, a.content, a.write_date, u.name FROM article a JOIN account u ON a.user_idx = u.idx WHERE a.idx = ?";
         const values = [articleIdx];

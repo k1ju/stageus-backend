@@ -5,106 +5,137 @@ const dbconfig = require("../../config/db.js");
 require('dotenv').config();
 const secretCode = process.env.secretCode;
 router.use(session({
-    resave:false,
-    saveUninitialized:false,
+    resave: false,
+    saveUninitialized: false,
     secret: secretCode
 }));
 
 //대댓글기능의 테이블 구조 다시 짜기
 
 //댓글쓰기
-router.post("/:articleIdx/:commentIdx", (req, res) => {
-    const { content, useridx } = req.body;
-    const { articleIdx, commentIdx } = req.params;
+router.post("/:articleIdx", (req, res) => {
+    const { content, userIdx } = req.body;
+    const articleIdx = req.params.articleIdx;
     const result = {
         "success": false,
         "message": "실패"
     }
     try {
-
-        if (!req.session.idx) { // 세션이 널값이라면
-            throw new Error("세션없음");
-        };
-        //db통신
-
-        result.success = true;
-        result.message = "성공";
+        if (!req.session.idx) throw new Error("세션없음");
+        const sql = "INSERT INTO comment(content, user_idx, article_idx) VALUES (?,?,?) ";
+        const values = [content, userIdx, articleIdx];
+        const conn = mysql.createConnection(dbconfig);
+        conn.query(sql, values, (err) => {
+            try {
+                if (err) throw new Error("db에러");
+                result.success = true;
+                result.message = "성공";
+            } catch (e) {
+                result.message = e.message;
+            } finally {
+                conn.end();
+                res.send(result);
+            }
+        })
     } catch (e) {
         result.message = e.message;
-    } finally {
         res.send(result);
     }
 })
 //댓글 불러오기
-router.get("/:articleidx", (req, res) => {
-    const articleidx = req.params;
+router.get("/:articleIdx", (req, res) => {
+    const articleIdx = req.params.articleIdx;
     const result = {
         "success": false,
-        "message": "실패"
-    }
+        "message": "실패",
+        "data": []
+    };
     try {
-
-        //db통신
-
-        result.success = true;
-        result.message = "성공";
+        const sql = "SELECT c.idx, content, write_date, name FROM comment c JOIN account u ON c.user_idx = u.idx WHERE article_idx = ? ORDER BY write_date ";
+        const values = [articleIdx];
+        const conn = mysql.createConnection(dbconfig);
+        conn.query(sql, values, (err, rs) => {
+            try {
+                if (err) throw new Error("db에러");
+                rs.forEach(elem => {
+                    let commentData = [elem.idx, elem.content, elem.write_date, elem.name];
+                    result.data.push(commentData);
+                })
+                result.success = true;
+                result.message = "성공";
+            } catch (e) {
+                result.message = e.message;
+            } finally {
+                conn.end();
+                res.send(result);
+            }
+        })
     } catch (e) {
         result.message = e.message;
-    } finally {
         res.send(result);
     }
 })
 //댓글수정하기
-router.put("/:commentidx", (req, res) => {
-    const commentidx = req.params;
-    const content = req.body;
+router.put("/:commentIdx", (req, res) => {
+    const commentIdx = req.params.commentIdx;
+    const { content, userIdx } = req.body;
     const result = {
         "success": false,
         "message": "실패"
     };
-
     try {
-        if (!req.session.idx) { // 세션이 널값이라면
-            throw new Error("세션없음")
-        };
-        if (req.session.idx !== userIdx) {
-            throw new Error("사용자 idx가 불일치")
-        };
-
-        //db통신
-
-        result.success = true;
-        result.message = "성공";
+        if (!req.session.idx) throw new Error("세션없음");
+        if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치");
+        const sql = "UPDATE comment SET content = ? WHERE idx = ? ";
+        const values = [content, commentIdx];
+        const conn = mysql.createConnection(dbconfig);
+        conn.query(sql, values, (err, rs) => {
+            try {
+                if (err) throw new Error("db에러");
+                result.success = "성공"
+                result.message = rs.affectedRows + "개 수정";
+            } catch (e) {
+                result.message = e.message;
+            } finally {
+                conn.end();
+                res.send(result);
+            }
+        })
     } catch (e) {
         result.message = e.message;
-    } finally {
         res.send(result);
     }
 })
 //댓글삭제하기
-router.delete("/:userIdx/:commentIdx", (req, res) => {
-    const { userIdx, commentIdx } = req.params;
+router.delete("/:commentIdx", (req, res) => {
+    const commentIdx = req.params.commentIdx;
+    const userIdx = req.body.userIdx;
     const result = {
         "success": false,
         "message": "실패"
     }
-
     try {
-        if (!req.session.idx) { // 세션이 널값이라면
-            throw new Error("세션없음")
-        };
-        if (req.session.idx !== userIdx) {
-            throw new Error("사용자 idx가 불일치")
-        }
-        //db통신
-
-        result.success = true;
-        result.message = "성공";
+        if (!req.session.idx) throw new Error("세션없음")
+        if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치")
+        const sql = "DELETE FROM comment WHERE idx = ? ";
+        const values = [content, commentIdx];
+        const conn = mysql.createConnection(dbconfig);
+        conn.query(sql, values, (err, rs) => {
+            try {
+                if (err) throw new Error("db에러");
+                result.success = "성공"
+                result.message = rs.affectedRows + "개 삭제";
+            } catch (e) {
+                result.message = e.message;
+            } finally {
+                conn.end();
+                res.send(result);
+            }
+        })
     } catch (e) {
         result.message = e.message;
-    } finally {
         res.send(result);
-    }
+    } 
 })
 
 module.exports = router;

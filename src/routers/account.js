@@ -255,16 +255,12 @@ router.get("/info/:idx", (req, res) => {
             "profile": ""
         }
     }
-
     try {
         if (req.session.idx != idx) throw new Error("사용자idx 불일치")
-
         const conn = mysql.createConnection(dbconfig);
         const sql = "SELECT * FROM account WHERE idx = ?";
         const values = [idx];
-
         conn.query(sql, values, (err, rs) => { //반환되는 result는 배열
-
             try{
                 if (err) throw new Error(err);
                 if(rs.length ==0 ) throw new Error("일치하는 회원정보없음")
