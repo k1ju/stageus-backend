@@ -6,11 +6,14 @@ require('dotenv').config();
 const secretCode = process.env.secretCode;
 router.use(session({
     resave: false,
-    saveUninitialized: false,
-    secret: secretCode
+    saveUninitialized: true,
+    secret: secretCode,
+    cookie: {
+        maxAge: 5 * 60 * 1000,
+        rolling:true
+    }
 }));
 
-//대댓글기능의 테이블 구조 다시 짜기
 
 //댓글쓰기
 router.post("/:articleIdx", (req, res) => {
@@ -21,7 +24,7 @@ router.post("/:articleIdx", (req, res) => {
         "message": "실패"
     }
     try {
-        if (!req.session.idx) throw new Error("세션없음");
+        //if (!req.session.idx) throw new Error("세션없음");
         const sql = "INSERT INTO comment(content, user_idx, article_idx) VALUES (?,?,?) ";
         const values = [content, userIdx, articleIdx];
         const conn = mysql.createConnection(dbconfig);
@@ -48,7 +51,7 @@ router.get("/:articleIdx", (req, res) => {
     const result = {
         "success": false,
         "message": "실패",
-        "data": []
+        "comment": []
     };
     try {
         const sql = "SELECT c.idx, content, write_date, name FROM comment c JOIN account u ON c.user_idx = u.idx WHERE article_idx = ? ORDER BY write_date ";
@@ -59,7 +62,7 @@ router.get("/:articleIdx", (req, res) => {
                 if (err) throw new Error("db에러");
                 rs.forEach(elem => {
                     let commentData = [elem.idx, elem.content, elem.write_date, elem.name];
-                    result.data.push(commentData);
+                    result.comment.push(commentData);
                 })
                 result.success = true;
                 result.message = "성공";
@@ -84,15 +87,15 @@ router.put("/:commentIdx", (req, res) => {
         "message": "실패"
     };
     try {
-        if (!req.session.idx) throw new Error("세션없음");
-        if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치");
+        //if (!req.session.idx) throw new Error("세션없음");
+        //if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치");
         const sql = "UPDATE comment SET content = ? WHERE idx = ? ";
         const values = [content, commentIdx];
         const conn = mysql.createConnection(dbconfig);
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
-                result.success = "성공"
+                result.success = true
                 result.message = rs.affectedRows + "개 수정";
             } catch (e) {
                 result.message = e.message;
@@ -115,15 +118,15 @@ router.delete("/:commentIdx", (req, res) => {
         "message": "실패"
     }
     try {
-        if (!req.session.idx) throw new Error("세션없음")
-        if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치")
+        // if (!req.session.idx) throw new Error("세션없음")
+        // if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치")
         const sql = "DELETE FROM comment WHERE idx = ? ";
-        const values = [content, commentIdx];
+        const values = [commentIdx];
         const conn = mysql.createConnection(dbconfig);
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
-                result.success = "성공"
+                result.success = true
                 result.message = rs.affectedRows + "개 삭제";
             } catch (e) {
                 result.message = e.message;
@@ -139,3 +142,7 @@ router.delete("/:commentIdx", (req, res) => {
 })
 
 module.exports = router;
+
+
+
+

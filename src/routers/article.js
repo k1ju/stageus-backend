@@ -4,13 +4,16 @@ const session = require("express-session");
 const mysql = require("mysql");
 // db세부정보 import
 const dbconfig = require('../../config/db.js');
-
 require('dotenv').config();
 const secretCode = process.env.secretCode;
 router.use(session({
     resave: false,
-    saveUninitialized: false,
-    secret: secretCode
+    saveUninitialized: true,
+    secret: secretCode,
+    cookie: {
+        maxAge: 5 * 60 * 1000,
+        rolling:true
+    }
 }));
 
 //게시글 목록 불러오기route
@@ -18,25 +21,19 @@ router.get("/all", (req, res) => {
     const result = {
         "success": false,
         "message": "실패",
-        "data": []
+        "article": []
     }
     try {
-
-        //db통신
-        // db연결객체 생성
         const conn = mysql.createConnection(dbconfig);
         const sql = "SELECT a.idx, title, write_date, u.name FROM article a JOIN account u ON a.user_idx = u.idx ORDER BY write_date";
-
         conn.query(sql, (err, rs) => {
             try {
                 if (err) throw new Error("db 에러");
                 if (rs.length == 0) throw new Error("게시글없음");
-
                 rs.forEach((elem) => {
                     let data = [elem.idx, elem.title, elem.write_date, elem.name];
-                    result.data.push(data);
+                    result.article.push(data);
                 })
-
             } catch (e) {
                 result.message = e.message;
             } finally {
@@ -44,7 +41,6 @@ router.get("/all", (req, res) => {
                 res.send(result);
             }
         })
-
         result.success = true;
         result.message = "성공";
     } catch (e) {
@@ -53,20 +49,17 @@ router.get("/all", (req, res) => {
     }
 })
 //게시글 작성하기
-router.post("/:userIdx", (req, res) => {
-    const { title, content } = req.body;
-    const userIdx = req.params.userIdx;
+router.post("/", (req, res) => {
+    const { userIdx, title, content } = req.body;
     const result = {
         "success": false,
         "message": "실패"
     }
-
     try {
-        if (!req.session.idx) throw new Error("세션없음");
+        //if (!req.session.idx) throw new Error("세션없음");
         const conn = mysql.createConnection(dbconfig);
         const sql = "INSERT INTO article(title,content,user_idx) VALUES (?,?,?) ";
         const values = [title, content, userIdx];
-
         conn.query(sql, values, (err) => {
             try {
                 if (err) throw new Error("db 에러");
@@ -79,10 +72,8 @@ router.post("/:userIdx", (req, res) => {
                 res.send(result);
             }
         })
-
         result.success = true;
         result.message = "성공";
-
     } catch (e) {
         result.message = e.message;
         res.send(result);
@@ -97,8 +88,7 @@ router.put("/:articleIdx", (req, res) => {
         "message": "실패"
     }
     try {
-        if (!req.session.idx) throw new Error("세션없음");
-        if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치");
+        //if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치");
 
         const conn = mysql.createConnection(dbconfig);
         const sql = "UPDATE article SET title = ?, content = ? WHERE idx = ?";
@@ -107,10 +97,8 @@ router.put("/:articleIdx", (req, res) => {
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
-
                 result.success = true;
                 result.message = rs.affectedRows + "개 수정"; // rs.affectedRows : insert, update, delete 의 데이터 개수 반환
-
             } catch (e) {
                 result.message = e.message;
             } finally {
@@ -132,9 +120,7 @@ router.delete("/:articleIdx", (req, res) => {
         "message": "실패"
     }
     try {
-        if (!req.session.idx) throw new Error("세션없음")
-        if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치")
-
+        //if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치")
         const sql = "DELETE FROM article WHERE idx = ?";
         const values = [articleIdx];
         const conn = mysql.createConnection(dbconfig); // db연결
@@ -161,7 +147,7 @@ router.get("/:articleIdx", (req, res) => {
     const result = {
         "success": false,
         "message": "실패",
-        "data": []
+        "article": []
     }
     try {
         const sql = "SELECT a.idx, a.title, a.content, a.write_date, u.name FROM article a JOIN account u ON a.user_idx = u.idx WHERE a.idx = ?";
@@ -172,7 +158,7 @@ router.get("/:articleIdx", (req, res) => {
                 if (err) throw new Error("db에러");
                 rs.forEach((elem) => {
                     const articleData = [elem.idx, elem.title, elem.content, elem.write_date, elem.name];
-                    result.data.push(articleData);
+                    result.article.push(articleData);
                 })
                 result.success = true;
                 result.message = "성공";
