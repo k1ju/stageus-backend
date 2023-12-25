@@ -1,21 +1,9 @@
 const router = require("express").Router();
-const session = require("express-session");
-const mysql = require("mysql");
-const dbconfig = require("../../config/db.js");
-require('dotenv').config();
-const secretCode = process.env.secretCode;
-router.use(session({
-    resave: false,
-    saveUninitialized: true,
-    secret: secretCode,
-    cookie: {
-        maxAge: 5 * 60 * 1000,
-        rolling:true
-    }
-}));
-
+const mysql = require('mysql');
+const dbconfig = require('../../config/db.js');
 
 //댓글쓰기
+//articleIdx body로 바꿔주기  
 router.post("/:articleIdx", (req, res) => {
     const { content, userIdx } = req.body;
     const articleIdx = req.params.articleIdx;
@@ -59,7 +47,7 @@ router.get("/:articleIdx", (req, res) => {
         const conn = mysql.createConnection(dbconfig);
         conn.query(sql, values, (err, rs) => {
             try {
-                if (err) throw new Error("db에러");
+                if (err) throw new Error("db에러"); // rs는 이미 리스트
                 rs.forEach(elem => {
                     let commentData = [elem.idx, elem.content, elem.write_date, elem.name];
                     result.comment.push(commentData);
@@ -89,8 +77,8 @@ router.put("/:commentIdx", (req, res) => {
     try {
         //if (!req.session.idx) throw new Error("세션없음");
         //if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치");
-        const sql = "UPDATE comment SET content = ? WHERE idx = ? ";
-        const values = [content, commentIdx];
+        const sql = "UPDATE comment SET content = ? WHERE idx = ? AND user_idx = ? ";
+        const values = [content, commentIdx, userIdx];
         const conn = mysql.createConnection(dbconfig);
         conn.query(sql, values, (err, rs) => {
             try {
@@ -120,8 +108,8 @@ router.delete("/:commentIdx", (req, res) => {
     try {
         // if (!req.session.idx) throw new Error("세션없음")
         // if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치")
-        const sql = "DELETE FROM comment WHERE idx = ? ";
-        const values = [commentIdx];
+        const sql = "DELETE FROM comment WHERE idx = ? AND user_idx = ? ";
+        const values = [commentIdx, userIdx];
         const conn = mysql.createConnection(dbconfig);
         conn.query(sql, values, (err, rs) => {
             try {

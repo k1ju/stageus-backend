@@ -1,28 +1,20 @@
 
 const router = require("express").Router();
 const regexPattern = require("../modules/regexPattern.js");
-const session = require("express-session");
 const mysql = require('mysql');
 const dbconfig = require('../../config/db.js');
-require('dotenv').config();
-const secretCode = process.env.secretCode; // .env로부터 환경변수 불러오기
-router.use(session({
-    resave: false,
-    saveUninitialized: true,
-    secret: secretCode,
-    cookie: {
-        maxAge: 5 * 60 * 1000,
-        rolling:true
-    }
-}));
+
 // 회원가입 api
+//여기서도중복체크해야댐
 router.post('/', (req, res) => {
     const { userID, userPw, userPwCheck, userName, userPhonenumber, userBirth } = req.body;
     const result = {
         "success": false,
         "message": ""
     };
+
     try {
+        //모듈 함수
         if (!userID?.trim() || !userPw?.trim() || !userPwCheck?.trim() || !userName?.trim() || !userPhonenumber?.trim() || !userBirth?.trim()) throw new Error("빈값이 존재해요");
         if (!regexPattern.userIDRegex.test(userID)) throw new Error("id형식이 맞지않음");
         if (!regexPattern.userPwRegex.test(userPw)) throw new Error("비번 형식맞지않음");
@@ -30,10 +22,13 @@ router.post('/', (req, res) => {
         if (!regexPattern.userPhonenumberRegex.test(userPhonenumber)) throw new Error("전화번호 형식제한 숫자 10~12글자");
         if (!regexPattern.userBirthRegex.test(userBirth)) throw new Error("생일형식 불일치")
         if (userPw != userPwCheck) throw new Error("비밀번호확인 불일치");
+
         const sql = `INSERT INTO account(id, pw, name, phonenumber,birth) VALUES (?,?,?,?,?)`;
         const values = [userID, userPw, userName, userPhonenumber, userBirth];
         const conn = mysql.createConnection(dbconfig);  // db연결 api내에서
+
         conn.query(sql, values, (err) => {
+
             try {
                 if (err) throw new Error(err);
                 result.success = true;
@@ -57,6 +52,7 @@ router.get("/login", (req, res) => {
         "success": false,
         "message": "로그인실패"
     };
+
     try {
         //if문 한줄로 줄이기
         if (!userID?.trim() || !userPw?.trim()) throw new Error("빈값이 존재해요")
@@ -70,6 +66,7 @@ router.get("/login", (req, res) => {
         //그래서 query문의 뒷부분까지 미리 실행되고나서, 콜백함수 실행된다.
         //함수구조를 바꾸어 동기적으로 작동하게끔 만들어준다.
         conn.query(sql, values, (err, rs) => { // 반환되는 rs는 배열이다.
+
             try {
                 if (err) throw new Error(err);
                 if (rs.length == 0) throw new Error("로그인정보없음");
@@ -116,14 +113,17 @@ router.get("/idCheck", (req, res) => {
         "success": false,
         "message": "id중복",
         "data":
-            { "isDuplicated" : false }
+            { "isDuplicated" : false } // ""붙이나 안붙이나 상관없지만 붙이자
     }
+
     try {
         if (!userID?.trim()) throw new Error("빈값이 존재해요");
         if (!regexPattern.userIDRegex.test(userID)) throw new Error("아이디 글자제한");
+
         const conn = mysql.createConnection(dbconfig);
         const sql = `SELECT idx FROM account WHERE id = ?`;
         const values = [userID];
+
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error(err);

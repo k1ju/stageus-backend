@@ -4,17 +4,22 @@ const session = require("express-session");
 require('dotenv').config();
 const { secretCode, port } = process.env; // .env로부터 환경변수 불러오기
 const app = express();
-
+// const mysql = require('mysql');
+// const dbconfig = require('./config/db.js');
 app.use(session({
-    resave:false,
-    saveUninitialized:false,
-    secret: secretCode
+    resave: false,
+    saveUninitialized: true,
+    secret: secretCode,
+    cookie: {
+        maxAge: 5 * 60 * 1000,
+        rolling:true
+    }
 }));
+
 
 app.use(express.json());
 
 //최대한 분할해서 커밋하기
-//노드 세션적용하기
 
 //페이지api
 const pageApi = require("./src/routers/page");
@@ -36,24 +41,4 @@ app.use("/comment", commentApi);
 app.listen(port, () => {
     console.log(`${port}번 포트번호 서버실행`)
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
