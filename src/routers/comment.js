@@ -1,9 +1,10 @@
 const router = require("express").Router();
 const mysql = require('mysql');
 const dbconfig = require('../../config/db.js');
+const pattern = require("../modules/regexPattern.js");
+
 
 //댓글쓰기
-//articleidx body로 바꿔주기  
 router.post("/", (req, res) => {
     const { articleidx, content, useridx } = req.body;
     const result = {
@@ -12,7 +13,10 @@ router.post("/", (req, res) => {
     }
     try {
         //if (!req.session.idx) throw new Error("세션없음");
-        regexPattern.nullCheck(content);
+        pattern.nullCheck(articleidx);
+        pattern.nullCheck(content);
+        pattern.nullCheck(useridx);
+
         const sql = "INSERT INTO comment(content, user_idx, article_idx) VALUES (?,?,?) ";
         const values = [content, useridx, articleidx];
         const conn = mysql.createConnection(dbconfig);
@@ -40,20 +44,19 @@ router.get("/", (req, res) => {
         "success": false,
         "message": "실패",
         "data":{
-            "comment": []
+            "comment": null
         }
     };
     try {
-        const sql = "SELECT c.idx, content, write_date, name FROM comment c JOIN account u ON c.user_idx = u.idx WHERE article_idx = ? ORDER BY write_date ";
+        pattern.nullCheck(articleidx);
+
+        const sql = "SELECT c.idx, content, write_date, name FROM comment c JOIN account u ON c.user_idx = u.idx WHERE article_idx = ? ORDER BY c.idx ";
         const values = [articleidx];
         const conn = mysql.createConnection(dbconfig);
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러"); // rs는 이미 리스트
-                rs.forEach(elem => {
-                    let commentData = [elem.idx, elem.content, elem.write_date, elem.name];
-                    result.comment.push(commentData);
-                })
+                result.data.comment = rs;
                 result.success = true;
                 result.message = "성공";
             } catch (e) {
@@ -76,14 +79,19 @@ router.put("/:commentidx", (req, res) => {
         "success": false,
         "message": "실패"
     };
+
     try {
         //if (!req.session.idx) throw new Error("세션없음");
         //if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치");
-        regexPattern.nullCheck(content);
-        regexPattern.nullCheck(useridx);
+
+        pattern.nullCheck(commentidx);
+        pattern.nullCheck(content);
+        pattern.nullCheck(useridx);
+
         const sql = "UPDATE comment SET content = ? WHERE idx = ? AND user_idx = ? ";
         const values = [content, commentidx, useridx];
         const conn = mysql.createConnection(dbconfig);
+
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
@@ -112,9 +120,13 @@ router.delete("/:commentidx", (req, res) => {
     try {
         // if (!req.session.idx) throw new Error("세션없음")
         // if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치")
+        pattern.nullCheck(commentidx);
+        pattern.nullCheck(useridx);
+
         const sql = "DELETE FROM comment WHERE idx = ? AND user_idx = ? ";
         const values = [commentidx, useridx];
         const conn = mysql.createConnection(dbconfig);
+
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");

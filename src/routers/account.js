@@ -1,6 +1,6 @@
 
 const router = require("express").Router();
-// const regexPattern = require("../modules/regexPattern.js");
+const pattern = require("../modules/regexPattern.js");
 const mysql = require('mysql');
 const dbconfig = require('../../config/db.js');
 
@@ -16,11 +16,13 @@ router.post('/', (req, res) => {
     try {
         //모듈 함수
         if (!userID?.trim() || !userPw?.trim() || !userPwCheck?.trim() || !userName?.trim() || !userPhonenumber?.trim() || !userBirth?.trim()) throw new Error("빈값이 존재해요");
-        if (!regexPattern.userIDRegex.test(userID)) throw new Error("id형식이 맞지않음");
-        if (!regexPattern.userPwRegex.test(userPw)) throw new Error("비번 형식맞지않음");
-        if (!regexPattern.userNameRegex.test(userName)) throw new Error("이름 글자제한 2~5글자");
-        if (!regexPattern.userPhonenumberRegex.test(userPhonenumber)) throw new Error("전화번호 형식제한 숫자 10~12글자");
-        if (!regexPattern.userBirthRegex.test(userBirth)) throw new Error("생일형식 불일치")
+
+        pattern.userIDCheck(userID);
+        pattern.userPwCheck(userPw);
+        pattern.userNameCheck(userName);
+        pattern.userPhonenumberCheck(userPhonenumber);
+        pattern.userBirthCheck(userBirth);
+
         if (userPw != userPwCheck) throw new Error("비밀번호확인 불일치");
 
         const sql = `INSERT INTO account(id, pw, name, phonenumber,birth) VALUES (?,?,?,?,?)`;
@@ -56,8 +58,9 @@ router.get("/login", (req, res) => {
     try {
         //if문 한줄로 줄이기
         if (!userID?.trim() || !userPw?.trim()) throw new Error("빈값이 존재해요")
-        if (!regexPattern.userIDRegex.test(userID)) throw new Error("아이디 글자제한")
-        if (!regexPattern.userPwRegex.test(userPw)) throw new Error("비번 글자제한");
+
+        pattern.userIDCheck(userID);
+        pattern.userPwCheck(userPw);
 
         const conn = mysql.createConnection(dbconfig);
         const sql = "SELECT * FROM account WHERE id = ? AND pw = ?";
@@ -118,7 +121,7 @@ router.get("/idCheck", (req, res) => {
 
     try {
         if (!userID?.trim()) throw new Error("빈값이 존재해요");
-        if (!regexPattern.userIDRegex.test(userID)) throw new Error("아이디 글자제한");
+        pattern.userIDCheck(userID);
 
         const conn = mysql.createConnection(dbconfig);
         const sql = `SELECT idx FROM account WHERE id = ?`;
@@ -158,8 +161,9 @@ router.get("/id", (req, res) => {
     }
     try {
         if (!userName?.trim() || !userPhonenumber?.trim()) throw new Error("빈값이 존재해요");
-        if (!regexPattern.userNameRegex.test(userName)) throw new Error("이름 글자제한 2~5글자");
-        if (!regexPattern.userPhonenumberRegex.test(userPhonenumber)) throw new Error("전화번호 형식제한 숫자 10~12글자");
+
+        pattern.userNameCheck(userName);
+        pattern.userPhonenumberCheck(userPhonenumber);
 
         const conn = mysql.createConnection(dbconfig);
         const sql = "SELECT id FROM account WHERE name = ? AND phonenumber = ?";
@@ -196,9 +200,11 @@ router.get("/pw", (req, res) => {
     }
     try {
         if (!userID?.trim() || !userName?.trim() || !userPhonenumber?.trim()) throw new Error("빈값이 존재해요")
-        if (!regexPattern.userIDRegex.test(userID)) throw new Error("id형식이 맞지않음")
-        if (!regexPattern.userNameRegex.test(userName)) throw new Error("이름 글자제한 2~5글자");
-        if (!regexPattern.userPhonenumberRegex.test(userPhonenumber)) throw new Error("전화번호 형식제한 숫자 10~12글자");
+
+        pattern.userIDCheck(userID);
+        pattern.userNameCheck(userName);
+        pattern.userPhonenumberCheck(userPhonenumber);
+
         const conn = mysql.createConnection(dbconfig);
         const sql = "SELECT pw FROM account WHERE id = ? AND name = ? AND phonenumber = ?";
         const values = [userID, userName, userPhonenumber];

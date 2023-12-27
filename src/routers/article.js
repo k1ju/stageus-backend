@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const mysql = require('mysql');
 const dbconfig = require('../../config/db.js');
-const regexPattern = require("../modules/regexPattern.js");
+const pattern = require("../modules/regexPattern.js");
 
 
 //게시글 목록 불러오기route
@@ -16,6 +16,7 @@ router.get("/all", (req, res) => {
     try {
         const conn = mysql.createConnection(dbconfig);
         const sql = "SELECT a.idx, title, write_date, u.name FROM article a JOIN account u ON a.user_idx = u.idx ORDER BY a.idx"; //orderby는 idx로하기!
+
         conn.query(sql, (err, rs) => { //rs는 원래 리스트
             try {
                 if (err) throw new Error("db 에러");
@@ -44,13 +45,15 @@ router.get("/:articleidx", (req, res) => {
         "data":{
             "article": null
         }
-
     }
+
     try {
-        regexPattern.nullCheck(articleidx)
+        pattern.nullCheck(articleidx)
+
         const sql = "SELECT a.idx, a.title, a.content, a.write_date, u.name FROM article a JOIN account u ON a.user_idx = u.idx WHERE a.idx = ?";
         const values = [articleidx];
         const conn = mysql.createConnection(dbconfig); // db연결
+
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
@@ -78,12 +81,15 @@ router.post("/", (req, res) => {
     }
     try {
         // if (!req.session.idx) throw new Error("세션없음");
-        regexPattern.nullCheck(useridx)
-        regexPattern.nullCheck(title)
-        regexPattern.nullCheck(content);
+
+        pattern.nullCheck(useridx)
+        pattern.nullCheck(title)
+        pattern.nullCheck(content);
+
         const conn = mysql.createConnection(dbconfig);
         const sql = "INSERT INTO article(title,content,user_idx) VALUES (?,?,?) ";
         const values = [title, content, useridx];
+
         conn.query(sql, values, (err) => {
             try {
                 if (err) throw new Error("db 에러");
@@ -113,13 +119,16 @@ router.put("/:articleidx", (req, res) => {
     }
     try {
         // if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치"); //유저 idx db전에도 검사
-        regexPattern.nullCheck(useridx)
-        regexPattern.nullCheck(title)
-        regexPattern.nullCheck(content);
-        regexPattern.nullCheck(articleidx)
+
+        pattern.nullCheck(useridx)
+        pattern.nullCheck(title)
+        pattern.nullCheck(content);
+        pattern.nullCheck(articleidx)
+
         const conn = mysql.createConnection(dbconfig);
         const sql = "UPDATE article SET title = ?, content = ? WHERE idx = ? AND user_idx = ?"; //db에서도 유저 idx검사
         const values = [title, content, articleidx, useridx];
+
         //db통신
         conn.query(sql, values, (err, rs) => {
             try {
@@ -149,11 +158,14 @@ router.delete("/:articleidx", (req, res) => {
     }
     try {
         //if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치")
-        regexPattern.nullCheck(useridx)
-        regexPattern.nullCheck(articleidx)
+
+        pattern.nullCheck(useridx)
+        pattern.nullCheck(articleidx)
+
         const sql = "DELETE FROM article WHERE idx = ? AND user_idx = ?";
         const values = [articleidx, useridx];
         const conn = mysql.createConnection(dbconfig); // db연결
+
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
