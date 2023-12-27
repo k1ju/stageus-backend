@@ -1,6 +1,8 @@
 const router = require("express").Router();
 const mysql = require('mysql');
 const dbconfig = require('../../config/db.js');
+const regexPattern = require("../modules/regexPattern.js");
+
 
 //게시글 목록 불러오기route
 router.get("/all", (req, res) => {
@@ -37,25 +39,63 @@ router.get("/all", (req, res) => {
         res.send(result);
     }
 })
+//게시글 자세히보기
+router.get("/:articleidx", (req, res) => {
+    const articleidx = req.params.articleidx;
+    const result = {
+        "success": false,
+        "message": "실패",
+        "article": []
+    }
+    try {
+        regexPattern.nullCheck(articleidx)
+        const sql = "SELECT a.idx, a.title, a.content, a.write_date, u.name FROM article a JOIN account u ON a.user_idx = u.idx WHERE a.idx = ?";
+        const values = [articleidx];
+        const conn = mysql.createConnection(dbconfig); // db연결
+        conn.query(sql, values, (err, rs) => {
+            try {
+                if (err) throw new Error("db에러");
+
+                rs.forEach((elem) => {
+                    const articleData = [elem.idx, elem.title, elem.content, elem.write_date, elem.name];
+                    result.article.push(articleData);
+                })
+                result.success = true;
+                result.message = "성공";
+            } catch (e) {
+                result.message = e.message;
+            } finally {
+                conn.end();
+                res.send(result);
+            }
+        })
+    } catch (e) {
+        result.message = e.message;
+        res.send(result);
+    } 
+})
 //게시글 작성하기
 router.post("/", (req, res) => {
-    const { userIdx, title, content } = req.body;
+    const { useridx, title, content } = req.body;
     const result = {
         "success": false,
         "message": "실패"
     }
     try {
-        if (!req.session.idx) throw new Error("세션없음");
+        // if (!req.session.idx) throw new Error("세션없음");
+        regexPattern.nullCheck(useridx)
+        regexPattern.nullCheck(title)
+        regexPattern.nullCheck(content);
         const conn = mysql.createConnection(dbconfig);
         const sql = "INSERT INTO article(title,content,user_idx) VALUES (?,?,?) ";
-        const values = [title, content, userIdx];
+        const values = [title, content, useridx];
         conn.query(sql, values, (err) => {
             try {
                 if (err) throw new Error("db 에러");
-
+                result.success = true;
+                result.message = "성공";
             } catch (e) {
                 result.message = e.message;
-
             } finally {
                 conn.end();
                 res.send(result);
@@ -69,18 +109,22 @@ router.post("/", (req, res) => {
     }
 })
 //게시글 수정하기
-router.put("/:articleIdx", (req, res) => {
-    const { userIdx, title, content } = req.body;
-    const articleIdx = req.params.articleIdx;
+router.put("/:articleidx", (req, res) => {
+    const { useridx, title, content } = req.body;
+    const articleidx = req.params.articleidx;
     const result = {
         "success": false,
         "message": "실패"
     }
     try {
-        if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치");
+        // if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치"); //유저 idx db전에도 검사
+        regexPattern.nullCheck(useridx)
+        regexPattern.nullCheck(title)
+        regexPattern.nullCheck(content);
+        regexPattern.nullCheck(articleidx)
         const conn = mysql.createConnection(dbconfig);
-        const sql = "UPDATE article SET title = ?, content = ? WHERE idx = ? AND user_idx = ?";
-        const values = [title, content, articleIdx, userIdx];
+        const sql = "UPDATE article SET title = ?, content = ? WHERE idx = ? AND user_idx = ?"; //db에서도 유저 idx검사
+        const values = [title, content, articleidx, useridx];
         //db통신
         conn.query(sql, values, (err, rs) => {
             try {
@@ -100,18 +144,20 @@ router.put("/:articleIdx", (req, res) => {
     }
 })
 //게시글 삭제하기
-router.delete("/:articleIdx", (req, res) => {
-    const userIdx = req.body.userIdx;
-    const articleIdx = req.params.articleIdx;
+router.delete("/:articleidx", (req, res) => {
+    const useridx = req.body.useridx;
+    const articleidx = req.params.articleidx;
     //idx 패스파라미터
     const result = {
         "success": false,
         "message": "실패"
     }
     try {
-        //if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치")
+        //if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치")
+        regexPattern.nullCheck(useridx)
+        regexPattern.nullCheck(articleidx)
         const sql = "DELETE FROM article WHERE idx = ? AND user_idx = ?";
-        const values = [articleIdx, userIdx];
+        const values = [articleidx, useridx];
         const conn = mysql.createConnection(dbconfig); // db연결
         conn.query(sql, values, (err, rs) => {
             try {
@@ -129,39 +175,6 @@ router.delete("/:articleIdx", (req, res) => {
         result.message = e.message;
         res.send(result);
     }
-})
-//게시글 자세히보기
-router.get("/:articleIdx", (req, res) => {
-    const articleIdx = req.params.articleIdx;
-    const result = {
-        "success": false,
-        "message": "실패",
-        "article": []
-    }
-    try {
-        const sql = "SELECT a.idx, a.title, a.content, a.write_date, u.name FROM article a JOIN account u ON a.user_idx = u.idx WHERE a.idx = ?";
-        const values = [articleIdx];
-        const conn = mysql.createConnection(dbconfig); // db연결
-        conn.query(sql, values, (err, rs) => {
-            try {
-                if (err) throw new Error("db에러");
-                rs.forEach((elem) => {
-                    const articleData = [elem.idx, elem.title, elem.content, elem.write_date, elem.name];
-                    result.article.push(articleData);
-                })
-                result.success = true;
-                result.message = "성공";
-            } catch (e) {
-                result.message = e.message;
-            } finally {
-                conn.end();
-                res.send(result);
-            }
-        })
-    } catch (e) {
-        result.message = e.message;
-        res.send(result);
-    } 
 })
 
 module.exports = router;

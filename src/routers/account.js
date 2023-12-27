@@ -1,6 +1,6 @@
 
 const router = require("express").Router();
-const regexPattern = require("../modules/regexPattern.js");
+// const regexPattern = require("../modules/regexPattern.js");
 const mysql = require('mysql');
 const dbconfig = require('../../config/db.js');
 
@@ -223,7 +223,7 @@ router.get("/pw", (req, res) => {
 })
 //내정보보기
 router.get("/info/:idx", (req, res) => {
-    const  idx = req.params.idx;
+    const idx = req.params.idx;
     //idx는 세션으로 받아오기 , body x
     //idx 유무 체크
     const result = {
@@ -293,10 +293,6 @@ router.put("/:idx", (req, res) => {
                 console.log(rs)
                 result.success = true;
                 result.message = "내정보 조회 성공";
-                result.data.name = userName;
-                result.data.phonenumber = userPhonenumber;
-                result.data.birth = birth;
-                result.data.profile = profile;
             }catch (e) {
                 result.message = e.message;
             } finally{

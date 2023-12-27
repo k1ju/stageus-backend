@@ -3,18 +3,18 @@ const mysql = require('mysql');
 const dbconfig = require('../../config/db.js');
 
 //댓글쓰기
-//articleIdx body로 바꿔주기  
-router.post("/:articleIdx", (req, res) => {
-    const { content, userIdx } = req.body;
-    const articleIdx = req.params.articleIdx;
+//articleidx body로 바꿔주기  
+router.post("/", (req, res) => {
+    const { articleidx, content, useridx } = req.body;
     const result = {
         "success": false,
         "message": "실패"
     }
     try {
         //if (!req.session.idx) throw new Error("세션없음");
+        regexPattern.nullCheck(content);
         const sql = "INSERT INTO comment(content, user_idx, article_idx) VALUES (?,?,?) ";
-        const values = [content, userIdx, articleIdx];
+        const values = [content, useridx, articleidx];
         const conn = mysql.createConnection(dbconfig);
         conn.query(sql, values, (err) => {
             try {
@@ -34,16 +34,18 @@ router.post("/:articleIdx", (req, res) => {
     }
 })
 //댓글 불러오기
-router.get("/:articleIdx", (req, res) => {
-    const articleIdx = req.params.articleIdx;
+router.get("/", (req, res) => {
+    const articleidx = req.query.articleidx;
     const result = {
         "success": false,
         "message": "실패",
-        "comment": []
+        "data":{
+            "comment": []
+        }
     };
     try {
         const sql = "SELECT c.idx, content, write_date, name FROM comment c JOIN account u ON c.user_idx = u.idx WHERE article_idx = ? ORDER BY write_date ";
-        const values = [articleIdx];
+        const values = [articleidx];
         const conn = mysql.createConnection(dbconfig);
         conn.query(sql, values, (err, rs) => {
             try {
@@ -67,18 +69,20 @@ router.get("/:articleIdx", (req, res) => {
     }
 })
 //댓글수정하기
-router.put("/:commentIdx", (req, res) => {
-    const commentIdx = req.params.commentIdx;
-    const { content, userIdx } = req.body;
+router.put("/:commentidx", (req, res) => {
+    const commentidx = req.params.commentidx;
+    const { content, useridx } = req.body;
     const result = {
         "success": false,
         "message": "실패"
     };
     try {
         //if (!req.session.idx) throw new Error("세션없음");
-        //if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치");
+        //if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치");
+        regexPattern.nullCheck(content);
+        regexPattern.nullCheck(useridx);
         const sql = "UPDATE comment SET content = ? WHERE idx = ? AND user_idx = ? ";
-        const values = [content, commentIdx, userIdx];
+        const values = [content, commentidx, useridx];
         const conn = mysql.createConnection(dbconfig);
         conn.query(sql, values, (err, rs) => {
             try {
@@ -98,18 +102,18 @@ router.put("/:commentIdx", (req, res) => {
     }
 })
 //댓글삭제하기
-router.delete("/:commentIdx", (req, res) => {
-    const commentIdx = req.params.commentIdx;
-    const userIdx = req.body.userIdx;
+router.delete("/:commentidx", (req, res) => {
+    const commentidx = req.params.commentidx;
+    const useridx = req.body.useridx;
     const result = {
         "success": false,
         "message": "실패"
     }
     try {
         // if (!req.session.idx) throw new Error("세션없음")
-        // if (req.session.idx !== userIdx) throw new Error("사용자 idx가 불일치")
+        // if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치")
         const sql = "DELETE FROM comment WHERE idx = ? AND user_idx = ? ";
-        const values = [commentIdx, userIdx];
+        const values = [commentidx, useridx];
         const conn = mysql.createConnection(dbconfig);
         conn.query(sql, values, (err, rs) => {
             try {
