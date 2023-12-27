@@ -10,21 +10,17 @@ router.get("/all", (req, res) => {
         "success": false,
         "message": "실패",
         "data":{
-            "article": [] //data로
+            "article": null //data로 바꾸기
         }
     }
     try {
         const conn = mysql.createConnection(dbconfig);
-        const sql = "SELECT a.idx, title, write_date, u.name FROM article a JOIN account u ON a.user_idx = u.idx ORDER BY write_date"; //orderby는 idx로하기!
+        const sql = "SELECT a.idx, title, write_date, u.name FROM article a JOIN account u ON a.user_idx = u.idx ORDER BY a.idx"; //orderby는 idx로하기!
         conn.query(sql, (err, rs) => { //rs는 원래 리스트
             try {
                 if (err) throw new Error("db 에러");
                 if (rs.length == 0) throw new Error("게시글없음");
-                // rs.forEach((elem) => {
-                //     let data = [elem.idx, elem.title, elem.write_date, elem.name];
-                //     result.article.push(data);
-                // })
-                result.article = rs;
+                result.data.article = rs;
             } catch (e) {
                 result.message = e.message;
             } finally {
@@ -45,7 +41,10 @@ router.get("/:articleidx", (req, res) => {
     const result = {
         "success": false,
         "message": "실패",
-        "article": []
+        "data":{
+            "article": null
+        }
+
     }
     try {
         regexPattern.nullCheck(articleidx)
@@ -55,11 +54,7 @@ router.get("/:articleidx", (req, res) => {
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
-
-                rs.forEach((elem) => {
-                    const articleData = [elem.idx, elem.title, elem.content, elem.write_date, elem.name];
-                    result.article.push(articleData);
-                })
+                result.data.article = rs;
                 result.success = true;
                 result.message = "성공";
             } catch (e) {
