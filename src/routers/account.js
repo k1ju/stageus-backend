@@ -1,6 +1,6 @@
 
 const router = require("express").Router();
-const pattern = require("../modules/regexPattern.js");
+const pattern = require("../modules/pattern.js");
 const mysql = require('mysql');
 const dbconfig = require('../../config/db.js');
 
@@ -16,14 +16,13 @@ router.post('/', (req, res) => {
     try {
         //모듈 함수
         if (!userID?.trim() || !userPw?.trim() || !userPwCheck?.trim() || !userName?.trim() || !userPhonenumber?.trim() || !userBirth?.trim()) throw new Error("빈값이 존재해요");
+        if (userPw != userPwCheck) throw new Error("비밀번호확인 불일치");
 
         pattern.userIDCheck(userID);
         pattern.userPwCheck(userPw);
         pattern.userNameCheck(userName);
         pattern.userPhonenumberCheck(userPhonenumber);
         pattern.userBirthCheck(userBirth);
-
-        if (userPw != userPwCheck) throw new Error("비밀번호확인 불일치");
 
         const sql = `INSERT INTO account(id, pw, name, phonenumber,birth) VALUES (?,?,?,?,?)`;
         const values = [userID, userPw, userName, userPhonenumber, userBirth];
@@ -34,7 +33,6 @@ router.post('/', (req, res) => {
             try {
                 if (err) throw new Error(err);
                 result.success = true;
-                result.message = "회원가입성공";
             } catch (e) {
                 result.message = e.message;
             } finally {
@@ -52,7 +50,7 @@ router.get("/login", (req, res) => {
     const { userID, userPw } = req.body;
     const result = {
         "success": false,
-        "message": "로그인실패"
+        "message": ""
     };
 
     try {
@@ -78,7 +76,6 @@ router.get("/login", (req, res) => {
                 req.session.phonenumber = rs[0].phonenumber;
                 req.session.birth = rs[0].birth;
                 result.success = true;
-                result.message = "로그인성공";
             } catch (e) {
                 result.message = e.message;
             } finally {
@@ -96,12 +93,11 @@ router.get("/login", (req, res) => {
 router.delete("/logout", (req, res) => {
     const result = {
         "success": false,
-        "message": "로그아웃실패"
+        "message": ""
     }
     try {
         req.session.destroy;
         result.success = true;
-        result.message = "로그아웃성공";
     } catch (e) {
         result.message = e.message;
     } finally {
@@ -154,7 +150,7 @@ router.get("/id", (req, res) => {
     const { userName, userPhonenumber } = req.body;
     const result = {
         "success": false,
-        "message": "id찾기실패",
+        "message": "",
         "data":
         {    "id": ""     }
         
@@ -174,7 +170,6 @@ router.get("/id", (req, res) => {
                 if (err) throw new Error(err);
                 if(result.length == 0) throw new Error("일치하는 id없음")
                 result.success = true;
-                result.message = "id찾기 성공";
                 result.data.id = rs[0].id;
             } catch (e) {
                 result.message = e.message;
@@ -194,7 +189,7 @@ router.get("/pw", (req, res) => {
     const { userID, userName, userPhonenumber } = req.body;
     const result = {
         "success": false,
-        "message": "pw찾기실패",
+        "message": "",
         "data":
         {    "pw": ""     }
     }
@@ -213,7 +208,6 @@ router.get("/pw", (req, res) => {
                 if (err) throw new Error(err);
                 if(rs.length ==0 ) throw new Error("일치하는 pw없음")
                 result.success = true;
-                result.message = "pw찾기 성공";
                 result.data.pw = rs[0].pw;
             }catch (e) {
                 result.message = e.message;
@@ -234,7 +228,7 @@ router.get("/info/:idx", (req, res) => {
     //idx 유무 체크
     const result = {
         "success": false,
-        "message": "실패",
+        "message": "",
         "data": {
             "name": "",
             "phonenumber": "",
@@ -253,7 +247,6 @@ router.get("/info/:idx", (req, res) => {
                 if (err) throw new Error(err);
                 if(rs.length ==0 ) throw new Error("일치하는 회원정보없음")
                 result.success = true;
-                result.message = "내정보 조회 성공";
                 result.data.name = rs[0].name;
                 result.data.phonenumber = rs[0].phonenumber;
                 result.data.birth = rs[0].birth;
@@ -278,7 +271,7 @@ router.put("/:idx", (req, res) => {
     const idx = req.params.idx;
     const result = {
         "success": false,
-        "message": "수정실패",
+        "message": "",
         "data": {
             "name": "",
             "phonenumber": "",
@@ -298,7 +291,6 @@ router.put("/:idx", (req, res) => {
                 if(rs.length == 0 ) throw new Error("일치하는 회원정보없음")
                 console.log(rs)
                 result.success = true;
-                result.message = "내정보 조회 성공";
             }catch (e) {
                 result.message = e.message;
             } finally{
@@ -317,7 +309,7 @@ router.delete("/:idx", (req, res) => {
     const idx = req.params.idx;
     const result = {
         "success": false,
-        "message": "실패",
+        "message": "",
     };
     try {
         if (req.session.idx != idx) throw new Error("사용자idx 불일치")
@@ -328,7 +320,6 @@ router.delete("/:idx", (req, res) => {
             try{
                 if (err) throw new Error(err);
                 result.success = true;
-                result.message = "회원탈퇴 성공";
             }catch (e) {
                 result.message = e.message;
             } finally{

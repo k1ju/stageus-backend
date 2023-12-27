@@ -1,14 +1,13 @@
 const router = require("express").Router();
 const mysql = require('mysql');
 const dbconfig = require('../../config/db.js');
-const pattern = require("../modules/regexPattern.js");
-
+const pattern = require("../modules/pattern.js");
 
 //게시글 목록 불러오기route
 router.get("/all", (req, res) => {
     const result = {
         "success": false,
-        "message": "실패",
+        "message": "",
         "data":{
             "article": null //data로 바꾸기
         }
@@ -30,7 +29,6 @@ router.get("/all", (req, res) => {
             }
         })
         result.success = true;
-        result.message = "성공";
     } catch (e) {
         result.message = e.message;
         res.send(result);
@@ -41,7 +39,7 @@ router.get("/:articleidx", (req, res) => {
     const articleidx = req.params.articleidx;
     const result = {
         "success": false,
-        "message": "실패",
+        "message": "",
         "data":{
             "article": null
         }
@@ -59,7 +57,6 @@ router.get("/:articleidx", (req, res) => {
                 if (err) throw new Error("db에러");
                 result.data.article = rs;
                 result.success = true;
-                result.message = "성공";
             } catch (e) {
                 result.message = e.message;
             } finally {
@@ -77,7 +74,7 @@ router.post("/", (req, res) => {
     const { useridx, title, content } = req.body;
     const result = {
         "success": false,
-        "message": "실패"
+        "message": ""
     }
     try {
         // if (!req.session.idx) throw new Error("세션없음");
@@ -94,7 +91,6 @@ router.post("/", (req, res) => {
             try {
                 if (err) throw new Error("db 에러");
                 result.success = true;
-                result.message = "성공";
             } catch (e) {
                 result.message = e.message;
             } finally {
@@ -103,7 +99,6 @@ router.post("/", (req, res) => {
             }
         })
         result.success = true;
-        result.message = "성공";
     } catch (e) {
         result.message = e.message;
         res.send(result);
@@ -111,19 +106,20 @@ router.post("/", (req, res) => {
 })
 //게시글 수정하기
 router.put("/:articleidx", (req, res) => {
-    const { useridx, title, content } = req.body;
+    const {title, content } = req.body;
+    const useridx = req.session.idx
     const articleidx = req.params.articleidx;
     const result = {
         "success": false,
-        "message": "실패"
+        "message": ""
     }
     try {
-        // if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치"); //유저 idx db전에도 검사
+        // if (!req.session.idx) throw new Error("세션없음");
 
-        pattern.nullCheck(useridx)
-        pattern.nullCheck(title)
+        pattern.nullCheck(useridx);
+        pattern.nullCheck(title);
         pattern.nullCheck(content);
-        pattern.nullCheck(articleidx)
+        pattern.nullCheck(articleidx);
 
         const conn = mysql.createConnection(dbconfig);
         const sql = "UPDATE article SET title = ?, content = ? WHERE idx = ? AND user_idx = ?"; //db에서도 유저 idx검사
@@ -149,15 +145,15 @@ router.put("/:articleidx", (req, res) => {
 })
 //게시글 삭제하기
 router.delete("/:articleidx", (req, res) => {
-    const useridx = req.body.useridx;
+    const useridx = req.session.idx;
     const articleidx = req.params.articleidx;
     //idx 패스파라미터
     const result = {
         "success": false,
-        "message": "실패"
+        "message": ""
     }
     try {
-        //if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치")
+        // if (!req.session.idx) throw new Error("세션없음");
 
         pattern.nullCheck(useridx)
         pattern.nullCheck(articleidx)

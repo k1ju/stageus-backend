@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const mysql = require('mysql');
 const dbconfig = require('../../config/db.js');
-const pattern = require("../modules/regexPattern.js");
+const pattern = require("../modules/pattern.js");
 
 
 //댓글쓰기
@@ -9,7 +9,7 @@ router.post("/", (req, res) => {
     const { articleidx, content, useridx } = req.body;
     const result = {
         "success": false,
-        "message": "실패"
+        "message": ""
     }
     try {
         //if (!req.session.idx) throw new Error("세션없음");
@@ -24,7 +24,6 @@ router.post("/", (req, res) => {
             try {
                 if (err) throw new Error("db에러");
                 result.success = true;
-                result.message = "성공";
             } catch (e) {
                 result.message = e.message;
             } finally {
@@ -42,7 +41,7 @@ router.get("/", (req, res) => {
     const articleidx = req.query.articleidx;
     const result = {
         "success": false,
-        "message": "실패",
+        "message": "",
         "data":{
             "comment": null
         }
@@ -53,12 +52,12 @@ router.get("/", (req, res) => {
         const sql = "SELECT c.idx, content, write_date, name FROM comment c JOIN account u ON c.user_idx = u.idx WHERE article_idx = ? ORDER BY c.idx ";
         const values = [articleidx];
         const conn = mysql.createConnection(dbconfig);
+
         conn.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러"); // rs는 이미 리스트
                 result.data.comment = rs;
                 result.success = true;
-                result.message = "성공";
             } catch (e) {
                 result.message = e.message;
             } finally {
@@ -74,15 +73,15 @@ router.get("/", (req, res) => {
 //댓글수정하기
 router.put("/:commentidx", (req, res) => {
     const commentidx = req.params.commentidx;
-    const { content, useridx } = req.body;
+    const useridx = req.session.idx
+    const { content } = req.body;
     const result = {
         "success": false,
-        "message": "실패"
+        "message": ""
     };
 
     try {
         //if (!req.session.idx) throw new Error("세션없음");
-        //if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치");
 
         pattern.nullCheck(commentidx);
         pattern.nullCheck(content);
@@ -111,15 +110,17 @@ router.put("/:commentidx", (req, res) => {
 })
 //댓글삭제하기
 router.delete("/:commentidx", (req, res) => {
+
     const commentidx = req.params.commentidx;
-    const useridx = req.body.useridx;
+    const useridx = req.session.idx;
     const result = {
         "success": false,
-        "message": "실패"
+        "message": ""
     }
+
     try {
         // if (!req.session.idx) throw new Error("세션없음")
-        // if (req.session.idx !== useridx) throw new Error("사용자 idx가 불일치")
+
         pattern.nullCheck(commentidx);
         pattern.nullCheck(useridx);
 
