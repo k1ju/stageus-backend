@@ -3,13 +3,12 @@ const router = require("express").Router();
 const pattern = require("../modules/pattern.js");
 const mysql = require('mysql');
 
-//postgreSQL 연결
 const { Pool } = require("pg");
 const dbconfig = require('../../config/db.js');
-const pool = new Pool(dbconfig);
 
 // 회원가입 api
-//여기서도중복체크해야댐
+//여기서도 아이디중복체크, 전화번호 중복체크 해야함.
+// 비동기함수처리하기
 router.post('/', (req, res) => {
     const { userID, userPw, userPwCheck, userName, userPhonenumber, userBirth } = req.body;
     const result = {
@@ -28,20 +27,35 @@ router.post('/', (req, res) => {
         pattern.userPhonenumberCheck(userPhonenumber);
         pattern.userBirthCheck(userBirth);
 
-        const sql = `INSERT INTO class.account(id, pw, name, phonenumber, birth) VALUES ($1, $2, $3, $4, $5)`;
-        const values = [userID, userPw, userName, userPhonenumber, userBirth];
-        
-        pool.connect();
-        pool.query(sql, values, (err) => {
-            try {
+        const sql1 = `SELECT * FROM class.account WHERE id = $1`;
+        const values1 = [userID];
+        const pool = new Pool(dbconfig);
+
+        pool.query(sql1, values1, (err, rs) => {
+            try{
                 if (err) throw new Error(err);
-                result.success = true;
+                if (rs.rows.length != 0) throw new Error("id중복")
+
+                const sql = `INSERT INTO class.account(id, pw, name, phonenumber, birth) VALUES ($1, $2, $3, $4, $5)`;
+                const values = [userID, userPw, userName, userPhonenumber, userBirth];
+
+                pool.query(sql, values, (err) => {
+                    try {
+                        if (err) throw new Error(err);
+                        result.success = true;
+                    } catch (e) {
+                        result.message = e.message;
+                    } finally {
+                        res.send(result);
+                    }
+                })
             } catch (e) {
                 result.message = e.message;
-            } finally {
                 res.send(result);
+
             }
         })
+
     } catch (e) {
         result.message = e.message;
         res.send(result);
@@ -67,11 +81,22 @@ router.get("/login", (req, res) => {
         //query메소드의 3번째인자의 함수는 콜백함수로, 비동기적으로 동작하는 함수이다
         //그래서 query문의 뒷부분까지 미리 실행되고나서, 콜백함수 실행된다.
         //함수구조를 바꾸어 동기적으로 작동하게끔 만들어준다.
+        const pool = new Pool(dbconfig);
 
-        pool.connect();
-        pool.query(sql, values, (err) => {
+        pool.query(sql, values, (err,rs) => { // pool.query에는 내부적으로 커넥션을 acquire, release하는 작업이 포함되어있다.
             try {
                 if (err) throw new Error(err);
+                if(!rs.rows || rs.rows.length==0) throw new Error("일치하는 회원정보없음") //undefined로 나올수도있고, 빈리스트 []로 나올 수 도있다?
+                console.log(rs.rows)
+
+                const user = rs.rows[0]
+
+                req.session.idx = user.idx; // 숫자형에 trim하면 에러
+                req.session.id = user.id.trim(); // char에만 trim해주기
+                req.session.name = user.name.trim();
+                req.session.phonenumber = user.phonenumber.trim();
+                req.session.birth = user.birth;
+
                 result.success = true;
             } catch (e) {
                 result.message = e.message;
@@ -93,7 +118,7 @@ router.delete("/logout", (req, res) => {
         "message": ""
     }
     try {
-        req.session.destroy;
+        req.session.destroy();
         result.success = true;
     } catch (e) {
         result.message = e.message;
@@ -102,59 +127,37 @@ router.delete("/logout", (req, res) => {
     }
 })
 
-//id중복찾기
+//id중복체크
 router.get("/idCheck", (req, res) => {
     const userID = req.body.userID;
     const result = {
         "success": false,
         "message": "id중복",
         "data":
-            { "isDuplicated" : false } // ""붙이나 안붙이나 상관없지만 붙이자
+            { "isDuplicated" : true } // ""붙이나 안붙이나 상관없지만 붙이자
     }
 
     try {
         if (!userID?.trim()) throw new Error("빈값이 존재해요");
         pattern.userIDCheck(userID);
 
-
-        const sql = `SELECT idx FROM account WHERE id = ?`;
+        const sql = `SELECT idx FROM class.account WHERE id = $1`;
         const values = [userID];
+        const pool = new Pool(dbconfig);
 
-
-        client.connect();
-        client.query(sql, values, (err) => {
+        pool.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error(err);
+                if(rs.rows.length != 0 ) throw new Error("id 중복") 
                 result.success = true;
+                result.data.isDuplicated = false
             } catch (e) {
                 result.message = e.message;
             } finally {
                 res.send(result);
-                conn.end();
             }
         });
 
-
-
-
-        // const conn = mysql.createConnection(dbconfig);
-        // conn.query(sql, values, (err, rs) => {
-        //     try {
-        //         if (err) throw new Error(err);
-        //         if (rs.length > 0) {
-        //             result.data.isDuplicated = true;
-        //             throw new Error("중복된 id");
-        //         }
-        //         result.success = true;
-        //         result.message = "사용가능한 id";
-        //         result.data.isDuplicated = false;
-        //     } catch (e) {
-        //         result.message = e.message;
-        //     } finally {
-        //         conn.end();
-        //         res.send(result); 
-        //     }
-        // });
     } catch (e) {
         result.message = e.message;
         res.send(result);
@@ -167,7 +170,7 @@ router.get("/id", (req, res) => {
         "success": false,
         "message": "",
         "data":
-        {    "id": ""     }
+            {"id": ""}
         
     }
     try {
@@ -176,20 +179,20 @@ router.get("/id", (req, res) => {
         pattern.userNameCheck(userName);
         pattern.userPhonenumberCheck(userPhonenumber);
 
-        const conn = mysql.createConnection(dbconfig);
-        const sql = "SELECT id FROM account WHERE name = ? AND phonenumber = ?";
+        const sql = "SELECT id FROM class.account WHERE name = $1 AND phonenumber = $2";
         const values = [userName, userPhonenumber];
+        const pool = new Pool(dbconfig);
 
-        conn.query(sql, values, (err, rs) => {
+        pool.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error(err);
-                if(result.length == 0) throw new Error("일치하는 id없음")
+                if(!rs.rows) throw new Error("일치하는 id없음")
                 result.success = true;
-                result.data.id = rs[0].id;
+                console.log(rs.rows[0].id)
+                result.data.id = rs.rows[0].id.trim(); // id공백제거 
             } catch (e) {
                 result.message = e.message;
             } finally {
-                conn.end();
                 res.send(result)
             }
         })
@@ -215,20 +218,20 @@ router.get("/pw", (req, res) => {
         pattern.userNameCheck(userName);
         pattern.userPhonenumberCheck(userPhonenumber);
 
-        const conn = mysql.createConnection(dbconfig);
-        const sql = "SELECT pw FROM account WHERE id = ? AND name = ? AND phonenumber = ?";
+        const sql = "SELECT pw FROM class.account WHERE id = $1 AND name = $2 AND phonenumber = $3";
         const values = [userID, userName, userPhonenumber];
-        conn.query(sql, values, (err, rs) => {
+        const pool = new Pool(dbconfig);
+
+        pool.query(sql, values, (err, rs) => {
             try{
                 if (err) throw new Error(err);
-                if(rs.length ==0 ) throw new Error("일치하는 pw없음")
+                if(!rs.rows) throw new Error("일치하는 pw없음")
                 result.success = true;
-                result.data.pw = rs[0].pw;
+                result.data.pw = rs.rows[0].pw.trim();
             }catch (e) {
                 result.message = e.message;
             } finally{
                 res.send(result);
-                conn.end();
             }
         })
     } catch (e) {
@@ -237,10 +240,8 @@ router.get("/pw", (req, res) => {
     } 
 })
 //내정보보기
-router.get("/info/:idx", (req, res) => {
-    const idx = req.params.idx;
-    //idx는 세션으로 받아오기 , body x
-    //idx 유무 체크
+router.get("/info", (req, res) => {
+    const idx = req.session.idx;
     const result = {
         "success": false,
         "message": "",
@@ -253,25 +254,36 @@ router.get("/info/:idx", (req, res) => {
         }
     };
     try {
-        // if (req.session.idx != idx) throw new Error("사용자idx 불일치")
-        const conn = mysql.createConnection(dbconfig);
-        const sql = "SELECT * FROM account WHERE idx = ?";
+        pattern.nullCheck(idx)
+        console.log(idx)
+
+        const sql = "SELECT * FROM class.account WHERE idx = $1";
         const values = [idx];
-        conn.query(sql, values, (err, rs) => { //반환되는 result는 배열
+        const pool = new Pool(dbconfig);
+
+        pool.query(sql, values, (err, rs) => { //반환되는 result는 배열
             try{
                 if (err) throw new Error(err);
-                if(rs.length ==0 ) throw new Error("일치하는 회원정보없음")
+                if(!rs.rows || rs.rows.length==0) throw new Error("일치하는 회원정보없음")
+
+                const user = rs.rows[0] 
+
                 result.success = true;
-                result.data.name = rs[0].name;
-                result.data.phonenumber = rs[0].phonenumber;
-                result.data.birth = rs[0].birth;
-                result.data.signupDate = rs[0].signupDate;
-                result.data.profile = rs[0].profile;
+                result.data.name = user.name.trim();  //char타입에만 trim넣어줘야한다.
+                result.data.phonenumber = user.phonenumber.trim();
+                result.data.birth = user.birth;
+                result.data.signupDate = user.signupDate;
+
+                if(user.profile == null){
+                    result.data.profile = "내용없음";
+                } else{
+                    result.data.profile = user.profile;
+                }
+                
             }catch (e) {
                 result.message = e.message;
             } finally{
                 res.send(result);
-                conn.end();
             }
         })
     } catch (e) {
@@ -281,36 +293,29 @@ router.get("/info/:idx", (req, res) => {
 })
 
 //정보수정
-router.put("/:idx", (req, res) => {
+router.put("/", (req, res) => {
     const { userName, userPhonenumber, birth, profile } = req.body;
-    const idx = req.params.idx;
+    const idx = req.session.idx 
     const result = {
         "success": false,
-        "message": "",
-        "data": {
-            "name": "",
-            "phonenumber": "",
-            "birth": "",
-            "profile": ""
-        }
+        "message": ""
     }
     try {
-        // if (req.session.idx != idx) throw new Error("사용자idx 불일치")
-        const conn = mysql.createConnection(dbconfig);
-        const sql = "UPDATE account SET name = ?, phonenumber = ?, birth = ?, profile = ? WHERE idx = ?";
-        const values = [userName, userPhonenumber, birth, profile, idx];
+        pattern.nullCheck(idx)
 
-        conn.query(sql, values, (err, rs) => {
+        const sql = "UPDATE class.account SET name = $1, phonenumber = $2, birth = $3, profile = $4 WHERE idx = $5";
+        const values = [userName, userPhonenumber, birth, profile, idx];
+        const pool = new Pool(dbconfig);
+
+        pool.query(sql, values, (err, rs) => {
             try{
                 if (err) throw new Error(err);
-                if(rs.length == 0 ) throw new Error("일치하는 회원정보없음")
-                console.log(rs)
+                if(!rs.rows) throw new Error("일치하는 회원정보없음")
                 result.success = true;
             }catch (e) {
                 result.message = e.message;
             } finally{
                 res.send(result);
-                conn.end();
             }
         })
     } catch (e) {
@@ -320,26 +325,28 @@ router.put("/:idx", (req, res) => {
 })
 
 //회원탈퇴
-router.delete("/:idx", (req, res) => {
-    const idx = req.params.idx;
+router.delete("/", (req, res) => {
+    const idx = req.session.idx;
     const result = {
         "success": false,
         "message": "",
     };
     try {
-        if (req.session.idx != idx) throw new Error("사용자idx 불일치")
-        const conn = mysql.createConnection(dbconfig);
-        const sql = "DELETE FROM account WHERE idx = ?";
+        pattern.nullCheck(idx);
+
+        const sql = "DELETE FROM class.account WHERE idx = $1";
         const values = [idx];
-        conn.query(sql, values, (err) => {
+        const pool = new Pool(dbconfig);
+
+        pool.query(sql, values, (err) => {
             try{
                 if (err) throw new Error(err);
                 result.success = true;
             }catch (e) {
                 result.message = e.message;
             } finally{
+                req.session.destroy();    
                 res.send(result);
-                conn.end();
             }
         })
     } catch (e) {
