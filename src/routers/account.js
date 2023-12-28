@@ -1,14 +1,13 @@
 
 const router = require("express").Router();
 const pattern = require("../modules/pattern.js");
-const mysql = require('mysql');
-
 const { Pool } = require("pg");
 const dbconfig = require('../../config/db.js');
 
 // 회원가입 api
 //여기서도 아이디중복체크, 전화번호 중복체크 해야함.
 // 비동기함수처리하기
+// dbCP 옵션 설정하기
 router.post('/', (req, res) => {
     const { userID, userPw, userPwCheck, userName, userPhonenumber, userBirth } = req.body;
     const result = {
@@ -86,8 +85,7 @@ router.get("/login", (req, res) => {
         pool.query(sql, values, (err,rs) => { // pool.query에는 내부적으로 커넥션을 acquire, release하는 작업이 포함되어있다.
             try {
                 if (err) throw new Error(err);
-                if(!rs.rows || rs.rows.length==0) throw new Error("일치하는 회원정보없음") //undefined로 나올수도있고, 빈리스트 []로 나올 수 도있다?
-                console.log(rs.rows)
+                if(!rs.rows || rs.rows.length==0) throw new Error("일치하는 회원정보없음") //undefined로 나올수도있고, 빈리스트 []로 나올 수 도있다? rs는 객체, rs.rows는 배열로 반환되기 때문이다
 
                 const user = rs.rows[0]
 
@@ -261,7 +259,7 @@ router.get("/info", (req, res) => {
         const values = [idx];
         const pool = new Pool(dbconfig);
 
-        pool.query(sql, values, (err, rs) => { //반환되는 result는 배열
+        pool.query(sql, values, (err, rs) => { //rs.rows는 배열, rs는 객체
             try{
                 if (err) throw new Error(err);
                 if(!rs.rows || rs.rows.length==0) throw new Error("일치하는 회원정보없음")

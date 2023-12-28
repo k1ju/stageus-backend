@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const mysql = require('mysql');
+const { Pool } = require("pg");
 const dbconfig = require('../../config/db.js');
 const pattern = require("../modules/pattern.js");
 
