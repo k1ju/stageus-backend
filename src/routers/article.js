@@ -23,7 +23,11 @@ router.get("/all", (req, res) => {
                 if (rs.rows.length == 0) throw new Error("게시글없음"); // 이건되고
                 // if (rs.length == 0) throw new Error("게시글없음"); // 이건 안되는이유  => rs는 객체이고 rs.rows는 배열.
 
-                result.data.article = rs.rows;
+                // rs.rows : select 결과 반환
+                // rs.affectedRows : insert, update, delete 의 데이터 개수 반환 (mysql)
+                // rs.rowCount : insert, update, delete 의 데이터 개수 반환 (psql)
+
+                result.data.article = rs.rows; 
                 result.success = true;
             } catch (e) {
                 result.message = e.message;
@@ -113,27 +117,28 @@ router.put("/:articleidx", (req, res) => {
         "message": ""
     }
     try {
-        // if (!req.session.idx) throw new Error("세션없음");
-
         pattern.nullCheck(useridx);
         pattern.nullCheck(title);
         pattern.nullCheck(content);
         pattern.nullCheck(articleidx);
 
-        const conn = mysql.createConnection(dbconfig);
-        const sql = "UPDATE article SET title = ?, content = ? WHERE idx = ? AND user_idx = ?"; //db에서도 유저 idx검사
+        const sql = "UPDATE class.article SET title = $1, content = $2 WHERE idx = $3 AND user_idx = $4"; //db에서도 유저 idx검사
         const values = [title, content, articleidx, useridx];
+        const pool = new Pool(dbconfig);
+
+        console.log(articleidx)
+        console.log(useridx)
 
         //db통신
-        conn.query(sql, values, (err, rs) => {
+        pool.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
+                if(rs.rowCount==0) throw new Error("일치하는 게시글 없습니다") // 
                 result.success = true;
-                result.message = rs.affectedRows + "개 수정"; // rs.affectedRows : insert, update, delete 의 데이터 개수 반환
+                result.message = rs.rowCount + "개 수정"; // rs.affectedRows : insert, update, delete 의 데이터 개수 반환
             } catch (e) {
                 result.message = e.message;
             } finally {
-                conn.end();
                 res.send(result);
             }
         })
@@ -152,24 +157,24 @@ router.delete("/:articleidx", (req, res) => {
         "message": ""
     }
     try {
-        // if (!req.session.idx) throw new Error("세션없음");
 
         pattern.nullCheck(useridx)
         pattern.nullCheck(articleidx)
 
-        const sql = "DELETE FROM article WHERE idx = ? AND user_idx = ?";
+        const sql = "DELETE FROM class.article WHERE idx = $1 AND user_idx = $2";
         const values = [articleidx, useridx];
-        const conn = mysql.createConnection(dbconfig); // db연결
+        const pool = new Pool(dbconfig);
 
-        conn.query(sql, values, (err, rs) => {
+        pool.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
+                if(rs.rowCount==0) throw new Error("일치하는 게시글 없습니다") // 
+
                 result.success = true;
-                result.message = rs.affectedRows + "개 삭제"; // rs.affectedRows : insert, update, delete 의 데이터 개수 반환
+                result.message = rs.rowCount + "개 삭제"; 
             } catch (e) {
                 result.message = e.message;
             } finally {
-                conn.end();
                 res.send(result);
             }
         })
