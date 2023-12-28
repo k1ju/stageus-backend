@@ -5,7 +5,9 @@ require('dotenv').config();
 const { secretCode, port } = process.env; // .env로부터 환경변수 불러오기
 const app = express();
 
-//postgreSQL 연결
+
+
+
 // const mysql = require('mysql');
 // const dbconfig = require('./config/db.js');
 app.use(session({

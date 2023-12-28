@@ -2,7 +2,11 @@
 const router = require("express").Router();
 const pattern = require("../modules/pattern.js");
 const mysql = require('mysql');
+
+//postgreSQL 연결
+const { Pool } = require("pg");
 const dbconfig = require('../../config/db.js');
+const pool = new Pool(dbconfig);
 
 // 회원가입 api
 //여기서도중복체크해야댐
@@ -24,12 +28,11 @@ router.post('/', (req, res) => {
         pattern.userPhonenumberCheck(userPhonenumber);
         pattern.userBirthCheck(userBirth);
 
-        const sql = `INSERT INTO account(id, pw, name, phonenumber,birth) VALUES (?,?,?,?,?)`;
+        const sql = `INSERT INTO class.account(id, pw, name, phonenumber, birth) VALUES ($1, $2, $3, $4, $5)`;
         const values = [userID, userPw, userName, userPhonenumber, userBirth];
-        const conn = mysql.createConnection(dbconfig);  // db연결 api내에서
-
-        conn.query(sql, values, (err) => {
-
+        
+        pool.connect();
+        pool.query(sql, values, (err) => {
             try {
                 if (err) throw new Error(err);
                 result.success = true;
@@ -37,9 +40,8 @@ router.post('/', (req, res) => {
                 result.message = e.message;
             } finally {
                 res.send(result);
-                conn.end();
             }
-        });
+        })
     } catch (e) {
         result.message = e.message;
         res.send(result);
@@ -60,29 +62,24 @@ router.get("/login", (req, res) => {
         pattern.userIDCheck(userID);
         pattern.userPwCheck(userPw);
 
-        const conn = mysql.createConnection(dbconfig);
-        const sql = "SELECT * FROM account WHERE id = ? AND pw = ?";
+        const sql = "SELECT * FROM class.account WHERE id = $1 AND pw = $2";
         const values = [userID, userPw];
         //query메소드의 3번째인자의 함수는 콜백함수로, 비동기적으로 동작하는 함수이다
         //그래서 query문의 뒷부분까지 미리 실행되고나서, 콜백함수 실행된다.
         //함수구조를 바꾸어 동기적으로 작동하게끔 만들어준다.
-        conn.query(sql, values, (err, rs) => { // 반환되는 rs는 배열이다.
 
+        pool.connect();
+        pool.query(sql, values, (err) => {
             try {
                 if (err) throw new Error(err);
-                if (rs.length == 0) throw new Error("로그인정보없음");
-                req.session.idx = rs[0].idx;
-                req.session.name = rs[0].name;
-                req.session.phonenumber = rs[0].phonenumber;
-                req.session.birth = rs[0].birth;
                 result.success = true;
             } catch (e) {
                 result.message = e.message;
             } finally {
-                conn.end();
                 res.send(result);
             }
-        })
+        });
+
     } catch (e) {
         result.message = e.message;
         res.send(result);
@@ -119,27 +116,45 @@ router.get("/idCheck", (req, res) => {
         if (!userID?.trim()) throw new Error("빈값이 존재해요");
         pattern.userIDCheck(userID);
 
-        const conn = mysql.createConnection(dbconfig);
+
         const sql = `SELECT idx FROM account WHERE id = ?`;
         const values = [userID];
 
-        conn.query(sql, values, (err, rs) => {
+
+        client.connect();
+        client.query(sql, values, (err) => {
             try {
                 if (err) throw new Error(err);
-                if (rs.length > 0) {
-                    result.data.isDuplicated = true;
-                    throw new Error("중복된 id");
-                }
                 result.success = true;
-                result.message = "사용가능한 id";
-                result.data.isDuplicated = false;
             } catch (e) {
                 result.message = e.message;
             } finally {
+                res.send(result);
                 conn.end();
-                res.send(result); 
             }
         });
+
+
+
+
+        // const conn = mysql.createConnection(dbconfig);
+        // conn.query(sql, values, (err, rs) => {
+        //     try {
+        //         if (err) throw new Error(err);
+        //         if (rs.length > 0) {
+        //             result.data.isDuplicated = true;
+        //             throw new Error("중복된 id");
+        //         }
+        //         result.success = true;
+        //         result.message = "사용가능한 id";
+        //         result.data.isDuplicated = false;
+        //     } catch (e) {
+        //         result.message = e.message;
+        //     } finally {
+        //         conn.end();
+        //         res.send(result); 
+        //     }
+        // });
     } catch (e) {
         result.message = e.message;
         res.send(result);
