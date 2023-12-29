@@ -6,28 +6,29 @@ const pattern = require("../modules/pattern.js");
 
 //댓글쓰기
 router.post("/", (req, res) => {
-    const { articleidx, content, useridx } = req.body;
+    const { articleidx, content } = req.body;
+    const idx = req.session.idx;
     const result = {
         "success": false,
         "message": ""
     }
     try {
-        //if (!req.session.idx) throw new Error("세션없음");
         pattern.nullCheck(articleidx);
         pattern.nullCheck(content);
-        pattern.nullCheck(useridx);
+        pattern.nullCheck(idx);
 
-        const sql = "INSERT INTO comment(content, user_idx, article_idx) VALUES (?,?,?) ";
-        const values = [content, useridx, articleidx];
-        const conn = mysql.createConnection(dbconfig);
-        conn.query(sql, values, (err) => {
+        const sql = "INSERT INTO class.comment(content, user_idx, article_idx) VALUES ($1, $2, $3) ";
+        const values = [content, idx, articleidx];
+        const pool = new Pool(dbconfig);
+
+        pool.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
                 result.success = true;
+                console.log(rs.rowCount)
             } catch (e) {
                 result.message = e.message;
             } finally {
-                conn.end();
                 res.send(result);
             }
         })
