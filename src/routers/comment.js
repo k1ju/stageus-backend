@@ -50,19 +50,18 @@ router.get("/", (req, res) => {
     try {
         pattern.nullCheck(articleidx);
 
-        const sql = "SELECT c.idx, content, write_date, name FROM comment c JOIN account u ON c.user_idx = u.idx WHERE article_idx = ? ORDER BY c.idx ";
+        const sql = "SELECT c.idx, content, write_date, name FROM class.comment c JOIN class.account u ON c.user_idx = u.idx WHERE article_idx = $1 ORDER BY c.idx ";
         const values = [articleidx];
-        const conn = mysql.createConnection(dbconfig);
+        const pool = new Pool(dbconfig);
 
-        conn.query(sql, values, (err, rs) => {
+        pool.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러"); // rs는 이미 리스트
-                result.data.comment = rs;
+                result.data.comment = rs.rows;
                 result.success = true;
             } catch (e) {
                 result.message = e.message;
             } finally {
-                conn.end();
                 res.send(result);
             }
         })
@@ -74,7 +73,7 @@ router.get("/", (req, res) => {
 //댓글수정하기
 router.put("/:commentidx", (req, res) => {
     const commentidx = req.params.commentidx;
-    const useridx = req.session.idx
+    const idx = req.session.idx
     const { content } = req.body;
     const result = {
         "success": false,
@@ -82,25 +81,22 @@ router.put("/:commentidx", (req, res) => {
     };
 
     try {
-        //if (!req.session.idx) throw new Error("세션없음");
-
         pattern.nullCheck(commentidx);
         pattern.nullCheck(content);
-        pattern.nullCheck(useridx);
+        pattern.nullCheck(idx);
 
-        const sql = "UPDATE comment SET content = ? WHERE idx = ? AND user_idx = ? ";
-        const values = [content, commentidx, useridx];
-        const conn = mysql.createConnection(dbconfig);
+        const sql = "UPDATE class.comment SET content = $1 WHERE idx = $2 AND user_idx = $3 ";
+        const values = [content, commentidx, idx];
+        const pool = new Pool(dbconfig);
 
-        conn.query(sql, values, (err, rs) => {
+        pool.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
                 result.success = true
-                result.message = rs.affectedRows + "개 수정";
+                result.message = rs.rowCount + "개 수정";
             } catch (e) {
                 result.message = e.message;
             } finally {
-                conn.end();
                 res.send(result);
             }
         })
@@ -113,31 +109,30 @@ router.put("/:commentidx", (req, res) => {
 router.delete("/:commentidx", (req, res) => {
 
     const commentidx = req.params.commentidx;
-    const useridx = req.session.idx;
+    const idx = req.session.idx;
     const result = {
         "success": false,
         "message": ""
     }
 
     try {
-        // if (!req.session.idx) throw new Error("세션없음")
 
         pattern.nullCheck(commentidx);
-        pattern.nullCheck(useridx);
+        pattern.nullCheck(idx);
 
-        const sql = "DELETE FROM comment WHERE idx = ? AND user_idx = ? ";
-        const values = [commentidx, useridx];
-        const conn = mysql.createConnection(dbconfig);
+        const sql = "DELETE FROM class.comment WHERE idx = $1 AND user_idx = $2 ";
+        const values = [commentidx, idx];
 
-        conn.query(sql, values, (err, rs) => {
+        const pool = new Pool(dbconfig);
+
+        pool.query(sql, values, (err, rs) => {
             try {
                 if (err) throw new Error("db에러");
                 result.success = true
-                result.message = rs.affectedRows + "개 삭제";
+                result.message = rs.rowCount + "개 삭제";
             } catch (e) {
                 result.message = e.message;
             } finally {
-                conn.end();
                 res.send(result);
             }
         })
