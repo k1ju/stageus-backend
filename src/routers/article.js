@@ -86,7 +86,6 @@ router.post("/", async (req, res) => {
         result.message = e.message;
     } finally {
         res.send(result);
-
     }
 })
 //게시글 수정하기
