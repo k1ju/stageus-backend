@@ -107,11 +107,7 @@ router.put("/:articleidx", async (req, res) => {
         const values = [title, content, articleidx, useridx];
         const pool = new Pool(dbconfig);
 
-        console.log(articleidx)
-        console.log(useridx)
-
         const rs = await pool.query(sql, values)
-        console.log(rs)
 
         if (rs.rowCount == 0) throw new Error("일치하는 게시글 없습니다") // 
         result.success = true;
@@ -142,7 +138,7 @@ router.delete("/:articleidx", async (req, res) => {
 
         const rs = await pool.query(sql, values)
 
-        if (rs.rowCount == 0) throw new Error("일치하는 게시글 없습니다")
+        if (rs.rowCount == 0) throw new Error("일치하는 게시글 없습니다") //굳이
 
         result.success = true;
         result.message = rs.rowCount + "개 삭제";

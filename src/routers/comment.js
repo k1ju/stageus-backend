@@ -41,8 +41,13 @@ router.get("/", async (req, res) => {
     };
     try {
         pattern.nullCheck(articleidx);
-
-        const sql = "SELECT c.idx, content, write_date, name FROM class.comment c JOIN class.account u ON c.user_idx = u.idx WHERE article_idx = $1 ORDER BY c.idx ";
+        //백틱으로 한번에 보기
+        const sql = ` 
+            SELECT c.idx, content, write_date, name 
+            FROM class.comment c 
+            JOIN class.account u ON c.user_idx = u.idx 
+            WHERE article_idx = $1 
+            ORDER BY c.idx `;
         const values = [articleidx];
         const pool = new Pool(dbconfig);
 

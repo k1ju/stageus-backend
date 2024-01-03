@@ -5,27 +5,22 @@ const { Pool } = require("pg");
 const dbconfig = require('../../config/db.js');
 
 // 회원가입 api
-//여기서도 아이디중복체크, 전화번호 중복체크 해야함.
-// 비동기함수처리하기
-router.post('/', async (req, res) => {
+router.post('/', async (req, res, next) => {
     const { userID, userPw, userPwCheck, userName, userPhonenumber, userBirth } = req.body;
-    const result = {
-        "success": false,
-        "message": ""
-    };
 
     try {
         //모듈 함수
-        if (!userID?.trim() || !userPw?.trim() || !userPwCheck?.trim() || !userName?.trim() || !userPhonenumber?.trim() || !userBirth?.trim()) throw new Error("빈값이 존재해요");
+        pattern.nullCheck(userID)
         if (userPw != userPwCheck) throw new Error("비밀번호확인 불일치");
 
+        //문제: 예외처리가 isnull, islength 와 같이 되어야함. fit하지않게*, 체이닝기법이용 .isnull.islengthCheck....
         pattern.userIDCheck(userID);
         pattern.userPwCheck(userPw);
         pattern.userNameCheck(userName);
         pattern.userPhonenumberCheck(userPhonenumber);
         pattern.userBirthCheck(userBirth);
 
-        const pool = new Pool(dbconfig);
+        const pool = new Pool(dbconfig); // 풀생성을 db.js에서 해주기
 
         const sql1 = `SELECT * FROM class.account WHERE id = $1`;
         const sql2 = `SELECT * FROM class.account WHERE phonenumber = $1`;
@@ -33,38 +28,32 @@ router.post('/', async (req, res) => {
         const values2 = [userPhonenumber];
 
         const [rs1, rs2] = await Promise.all([
-            pool.query(sql1, values1),  // 1초소요
+            pool.query(sql1, values1),
             pool.query(sql2, values2)
         ])
 
-        if(rs1.rows.length != 0) throw new Error("id중복"); 
-        if(rs2.rows.length != 0) throw new Error("전화번호 중복");
+        // const rs1 = await pool.query(sql1, values1); // 51ms 41 44
+        // const rs2 = await pool.query(sql2, values2);
+
+        if (rs1.rows.length != 0) throw new Error("id중복");
+        if (rs2.rows.length != 0) throw new Error("전화번호 중복");
 
         const sql3 = `INSERT INTO class.account(id, pw, name, phonenumber, birth) VALUES ($1, $2, $3, $4, $5)`;
         const values3 = [userID, userPw, userName, userPhonenumber, userBirth];
         await pool.query(sql3, values3);
 
-        result.success = true;
+        res.status(200).send();
 
     } catch (e) {
-        result.message = e.message;
-    } finally {
-        res.send(result);
+        next(e);
     }
 })
 
 // 로그인 api
-router.get("/login", async (req, res) => {
+router.get("/login", async (req, res, next) => {
     const { userID, userPw } = req.body;
-    const result = {
-        "success": false,
-        "message": ""
-    };
 
     try {
-        //if문 한줄로 줄이기
-        if (!userID?.trim() || !userPw?.trim()) throw new Error("빈값이 존재해요");
-
         pattern.userIDCheck(userID);
         pattern.userPwCheck(userPw);
 
@@ -88,42 +77,32 @@ router.get("/login", async (req, res) => {
         req.session.phonenumber = user.phonenumber.trim();
         req.session.birth = user.birth;
 
-        result.success = true;
+        res.status(200).send();
+
     } catch (e) {
-        result.message = e.message;
-    } finally {
-        res.send(result);
+        next(e);
     }
 })
 
 //로그아웃
-router.delete("/logout", (req, res) => {
-    const result = {
-        "success": false,
-        "message": ""
-    }
+router.delete("/logout", (req, res, next) => {
+
     try {
         req.session.destroy();
-        result.success = true;
+        res.status(200).send();
     } catch (e) {
-        result.message = e.message;
-    } finally {
-        res.send(result);
+        next(e);
     }
 })
 
 //id중복체크
-router.get("/idCheck", async (req, res) => {
+router.get("/idCheck", async (req, res, next) => {
     const userID = req.body.userID;
     const result = {
-        "success": false,
-        "message": "",
-        "data":
-            { "isDuplicated": true } // ""붙이나 안붙이나 상관없지만 붙이자
+        "data": null
     }
 
     try {
-        if (!userID?.trim()) throw new Error("빈값이 존재해요");
         pattern.userIDCheck(userID);
 
         const sql = `SELECT idx FROM class.account WHERE id = $1`;
@@ -133,27 +112,19 @@ router.get("/idCheck", async (req, res) => {
         const rs = await pool.query(sql, values)
 
         if (rs.rows.length != 0) throw new Error("id 중복")
-        result.success = true;
         result.data.isDuplicated = false
 
     } catch (e) {
-        result.message = e.message;
-    } finally {
-        res.send(result);
+        next(e)
     }
 })
 //id찾기
-router.get("/id", async(req, res) => {
+router.get("/id", async (req, res, next) => {
     const { userName, userPhonenumber } = req.body;
     const result = {
-        "success": false,
-        "message": "",
-        "data":
-            { "id": "" }
+        "data": null
     }
     try {
-        if (!userName?.trim() || !userPhonenumber?.trim()) throw new Error("빈값이 존재해요");
-
         pattern.userNameCheck(userName);
         pattern.userPhonenumberCheck(userPhonenumber);
 
@@ -164,28 +135,21 @@ router.get("/id", async(req, res) => {
         const rs = await pool.query(sql, values)
 
         if (rs.rows.length == 0) throw new Error("일치하는 id없음")
-        result.success = true;
         result.data.id = rs.rows[0].id.trim(); // id공백제거 
+        res.status(200).send();
 
     } catch (e) {
-        result.message = e.message;
-    } finally {
-        res.send(result)
+        next(e)
     }
 })
 //비밀번호찾기
-router.get("/pw", async(req, res) => {
+router.get("/pw", async (req, res, next) => {
     //예외처리
     const { userID, userName, userPhonenumber } = req.body;
     const result = {
-        "success": false,
-        "message": "",
-        "data":
-            { "pw": "" }
+        "data": null
     }
     try {
-        if (!userID?.trim() || !userName?.trim() || !userPhonenumber?.trim()) throw new Error("빈값이 존재해요")
-
         pattern.userIDCheck(userID);
         pattern.userNameCheck(userName);
         pattern.userPhonenumberCheck(userPhonenumber);
@@ -197,41 +161,30 @@ router.get("/pw", async(req, res) => {
         const rs = await pool.query(sql, values)
 
         if (rs.rows.length == 0) throw new Error("일치하는 pw없음")
-        result.success = true;
         result.data.pw = rs.rows[0].pw.trim();
+        res.status(200).send();
 
     } catch (e) {
-        result.message = e.message;
-    } finally {
-        res.send(result);
+        next(e);
     }
 })
 //내정보보기
-router.get("/info", async(req, res) => {
+router.get("/info", async (req, res, next) => {
     const idx = req.session.idx;
     const result = {
-        "success": false,
-        "message": "",
-        "data": {
-            "name": "",
-            "phonenumber": "",
-            "birth": "",
-            "signupDate": "",
-            "profile": ""
-        }
+        "data": null
     };
     try {
         pattern.nullCheck(idx)
-        console.log(idx)
+        console.log(idx, idx, idx)
 
         const sql = "SELECT * FROM class.account WHERE idx = $1";
         const values = [idx];
         const pool = new Pool(dbconfig);
 
-        const rs = await pool.query(sql, values) 
+        const rs = await pool.query(sql, values)
 
         if (rs.rows.length == 0) throw new Error("일치하는 회원정보없음")
-        result.success = true;
         const user = rs.rows[0]
 
         result.data.name = user.name.trim();  //char타입에만 trim넣어줘야한다.
@@ -244,22 +197,19 @@ router.get("/info", async(req, res) => {
         } else {
             result.data.profile = user.profile;
         }
+        res.status(200).send(result);
 
     } catch (e) {
-        result.message = e.message;
-    } finally {
-        res.send(result);
+        next(e);
     }
+
 })
 
 //정보수정
-router.put("/", async (req, res) => {
+router.put("/", async (req, res, next) => {
     const { userName, userPhonenumber, birth, profile } = req.body;
     const idx = req.session.idx
-    const result = {
-        "success": false,
-        "message": ""
-    }
+
     try {
         pattern.nullCheck(idx)
 
@@ -269,23 +219,22 @@ router.put("/", async (req, res) => {
         const values = [userPhonenumber]
         const rs = await pool.query(sql, values)
 
-        if(rs.rows.length != 0) throw new Error("연락처 중복")
+        if (rs.rows.length != 0) throw new Error("연락처 중복")
 
         const sql2 = "UPDATE class.account SET name = $1, phonenumber = $2, birth = $3, profile = $4 WHERE idx = $5";
         const values2 = [userName, userPhonenumber, birth, profile, idx];
 
         await pool.query(sql2, values2)
-        result.success = true;
+        res.status(200).send();
 
     } catch (e) {
-        result.message = e.message;
-    } finally {
-        res.send(result);
+        console.log(e.status)
+        next(e);
     }
 })
 
 //회원탈퇴
-router.delete("/", async (req, res) => {
+router.delete("/", async (req, res, next) => {
     const idx = req.session.idx;
     const result = {
         "success": false,
@@ -299,14 +248,12 @@ router.delete("/", async (req, res) => {
         const pool = new Pool(dbconfig);
 
         await pool.query(sql, values)
-        result.success = true;
 
-    } catch (e) {
-        result.message = e.message;
-    } finally {
         req.session.destroy();
         res.send(result);
 
+    } catch (e) {
+        next(e);
     }
 })
 

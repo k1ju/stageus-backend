@@ -27,8 +27,12 @@ const pattern = {
 
     nullCheck: (tmp) => {
         if(typeof tmp == "number" || typeof tmp == "boolean") return;
-        // 숫자형, 불리언 일때 처리 
-        if(!tmp?.trim()) throw new Error("입력받은 값중에 빈값이 있습니다")
+
+        if(!tmp?.trim()) {
+            const error = new Error("빈값이 존재합니다");
+            error.status = 400;
+            throw error;            
+        }
     }
 }
 
