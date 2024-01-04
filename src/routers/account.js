@@ -1,9 +1,7 @@
 
 const router = require("express").Router();
-const { body, param, validationResult } = require("express-validator");
-const pattern = require("../modules/pattern.js");
 const pool = require("../config/db"); // 풀 속성이 아닌 풀 객체를 받아오는 것이므로 {pool}이아닌 pool
-const middleware = require("../modules/middlewares/validationMiddleware.js");
+const middleware = require("../modules/validation.js");
 // 예외처리도 미들웨어처리
 // 예외처리 fit하지않게 체이닝기법 .isnull.islengthCheck
 
@@ -19,9 +17,9 @@ router.post('/',
     middleware.userPhonenumberCheck,
     middleware.userBirthCheck,
     async (req, res, next) => {
+        const { userID, userPw, userName, userPhonenumber, userBirth } = req.body;
 
         try {
-            const { userID, userPw, userName, userPhonenumber, userBirth } = req.body;
 
             const sql1 = `SELECT * FROM class.account WHERE id = $1`;
             const sql2 = `SELECT * FROM class.account WHERE phonenumber = $1`;
@@ -55,9 +53,9 @@ router.get("/login",
     middleware.userIDCheck,
     middleware.userPwCheck,
     async (req, res, next) => {
+        const { userID, userPw } = req.body;
 
         try {
-            const { userID, userPw } = req.body;
 
             const sql = "SELECT * FROM class.account WHERE id = $1 AND pw = $2";
             const values = [userID, userPw];
@@ -107,7 +105,6 @@ router.get("/idCheck",
         };
 
         try {
-
             const sql = `SELECT idx FROM class.account WHERE id = $1`;
             const values = [userID];
 
@@ -160,10 +157,6 @@ router.get("/pw",
         }
 
         try {
-            pattern.userIDCheck(userID);
-            pattern.userNameCheck(userName);
-            pattern.userPhonenumberCheck(userPhonenumber);
-
             const sql = "SELECT pw FROM class.account WHERE id = $1 AND name = $2 AND phonenumber = $3";
             const values = [userID, userName, userPhonenumber];
 
@@ -186,7 +179,6 @@ router.get("/info",
             "data": {}
         };
         try {
-        
             const sql = "SELECT * FROM class.account WHERE idx = $1";
             const values = [idx];
 
@@ -226,7 +218,6 @@ router.put("/",
         const idx = req.session.idx
 
         try {
-
             const sql = "SELECT phonenumber FROM class.account WHERE phonenumber = $1";
             const values = [userPhonenumber]
             const rs = await pool.query(sql, values)
@@ -256,7 +247,6 @@ router.delete("/",
         };
 
         try {
-
             const sql = "DELETE FROM class.account WHERE idx = $1";
             const values = [idx];
 

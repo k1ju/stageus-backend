@@ -6,7 +6,7 @@ const { secretCode, port } = process.env; // .env로부터 환경변수 불러�
 const app = express();
 
 app.use(session({
-    resave: false,
+    resave: true,
     saveUninitialized: true,
     secret: secretCode,
     cookie: {
@@ -17,8 +17,8 @@ app.use(session({
 //next 에러핸들링
 // 익스프레스 쓰레기통
 // 모든api에대한 후처리를 한곳에서 가능
-
 app.use(express.json());
+
 
 
 
