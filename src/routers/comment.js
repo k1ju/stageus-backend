@@ -1,6 +1,6 @@
 const router = require("express").Router();
-const { Pool } = require("pg");
-const dbconfig = require('../../config/db.js');
+// const { Pool } = require("pg");
+// const dbconfig = require('../../config/db.js');
 const pattern = require("../modules/pattern.js");
 
 
@@ -19,7 +19,7 @@ router.post("/", async (req, res) => {
 
         const sql = "INSERT INTO class.comment(content, user_idx, article_idx) VALUES ($1, $2, $3) ";
         const values = [content, idx, articleidx];
-        const pool = new Pool(dbconfig);
+        // const pool = new Pool(dbconfig);
 
         await pool.query(sql, values)
         result.success = true;
@@ -49,7 +49,7 @@ router.get("/", async (req, res) => {
             WHERE article_idx = $1 
             ORDER BY c.idx `;
         const values = [articleidx];
-        const pool = new Pool(dbconfig);
+        // const pool = new Pool(dbconfig);
 
         const rs = await pool.query(sql, values)
         if(rs.rowCount == 0) throw new Error("작성된 댓글없음")
@@ -78,7 +78,7 @@ router.put("/:commentidx", async (req, res) => {
 
         const sql = "UPDATE class.comment SET content = $1 WHERE idx = $2 AND user_idx = $3 ";
         const values = [content, commentidx, idx];
-        const pool = new Pool(dbconfig);
+        // const pool = new Pool(dbconfig);
 
         const rs = await pool.query(sql, values)
         result.success = true
@@ -105,7 +105,7 @@ router.delete("/:commentidx", async (req, res) => {
 
         const sql = "DELETE FROM class.comment WHERE idx = $1 AND user_idx = $2 ";
         const values = [commentidx, idx];
-        const pool = new Pool(dbconfig);
+        // const pool = new Pool(dbconfig);
 
         const rs = await pool.query(sql, values)
         result.success = true

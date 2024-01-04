@@ -1,7 +1,7 @@
 const pattern = {
 
     userIDCheck: (tmp) => {
-        const userIDRegex = /^\w[\w\d!@#$%^&*()_+{}|:"<>?/-]{1,19}$/
+        const userIDRegex = /^\w[\w\d!@#$%^&*()_+{}|:"<>?/-]{1,20}$/
         if(!userIDRegex.test(tmp)) throw new Error("아이디 형식 불일치")
     },
 
@@ -25,10 +25,14 @@ const pattern = {
         if(!userBirthRegex.test(tmp)) throw new Error("생일 형식 불일치")
     },
 
+    lengthCheck: (min=0,max=99) => {
+
+    }
+    ,
     nullCheck: (tmp) => {
         if(typeof tmp == "number" || typeof tmp == "boolean") return;
 
-        if(!tmp?.trim()) {
+        if(tmp?.trim()) {
             const error = new Error("빈값이 존재합니다");
             error.status = 400;
             throw error;            

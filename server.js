@@ -22,12 +22,6 @@ app.use(express.json());
 
 
 
-// app.use((err, req, res, next) => {
-//     console.log("나머지에러 실행")
-//     res.status(500).send({ message: err.message });
-// })
-
-
 //페이지api
 const pageApi = require("./src/routers/page");
 app.use("/", pageApi);
@@ -47,13 +41,8 @@ app.use("/comment", commentApi);
 
 app.use((err, req, res, next) => {
 
-    console.log(err.status)
-
-    if(!err.status) {
-        err.status = 500;
-    }
-    // res.status(500).send({ message: err.message });
-
+    if (!err.status) err.status = 500;
+    
     res.status(err.status).send({ message: err.message });
 })
 

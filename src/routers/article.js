@@ -1,6 +1,6 @@
 const router = require("express").Router();
-const { Pool } = require("pg");
-const dbconfig = require('../../config/db.js');
+// const { Pool } = require("pg");
+// const dbconfig = require('../../config/db.js');
 const pattern = require("../modules/pattern.js");
 
 //게시글 목록 불러오기route
@@ -15,7 +15,7 @@ router.get("/all", async (req, res) => {
 
     try {
         const sql = "SELECT a.idx, title, write_date, u.name FROM class.article a JOIN class.account u ON a.user_idx = u.idx ORDER BY a.idx"; //orderby는 idx로하기!
-        const pool = new Pool(dbconfig);
+        // const pool = new Pool(dbconfig);
 
         const rs = await pool.query(sql)
         if (rs.rowCount == 0) throw new Error("게시글없음");
@@ -50,7 +50,7 @@ router.get("/:articleidx", async (req, res) => {
 
         const sql = "SELECT a.idx, a.title, a.content, a.write_date, u.name FROM class.article a JOIN class.account u ON a.user_idx = u.idx WHERE a.idx = $1";
         const values = [articleidx];
-        const pool = new Pool(dbconfig);
+        // const pool = new Pool(dbconfig);
 
         const rs = await pool.query(sql, values)
         result.data.article = rs.rows;
@@ -78,7 +78,7 @@ router.post("/", async (req, res) => {
 
         const sql = "INSERT INTO class.article(title,content,user_idx) VALUES ($1, $2, $3) ";
         const values = [title, content, useridx];
-        const pool = new Pool(dbconfig);
+        // const pool = new Pool(dbconfig);
 
         await pool.query(sql, values)
         result.success = true;
@@ -105,7 +105,7 @@ router.put("/:articleidx", async (req, res) => {
 
         const sql = "UPDATE class.article SET title = $1, content = $2 WHERE idx = $3 AND user_idx = $4"; //db에서도 유저 idx검사
         const values = [title, content, articleidx, useridx];
-        const pool = new Pool(dbconfig);
+        // const pool = new Pool(dbconfig);
 
         const rs = await pool.query(sql, values)
 
@@ -134,7 +134,7 @@ router.delete("/:articleidx", async (req, res) => {
 
         const sql = "DELETE FROM class.article WHERE idx = $1 AND user_idx = $2";
         const values = [articleidx, useridx];
-        const pool = new Pool(dbconfig);
+        // const pool = new Pool(dbconfig);
 
         const rs = await pool.query(sql, values)
 
