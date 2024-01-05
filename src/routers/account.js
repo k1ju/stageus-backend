@@ -1,6 +1,6 @@
 
 const router = require("express").Router();
-const pool = require("../config/db"); // 풀 속성이 아닌 풀 객체를 받아오는 것이므로 {pool}이아닌 pool
+const { pool } = require("../config/db"); // 풀 속성이 아닌 풀 객체를 받아오는 것이므로 {pool}이아닌 pool
 const middleware = require("../modules/validation.js");
 // 예외처리도 미들웨어처리
 // 예외처리 fit하지않게 체이닝기법 .isnull.islengthCheck
@@ -119,7 +119,6 @@ router.get("/idCheck",
 })
 //id찾기
 router.get("/id",
-    middleware.sessionCheck,
     middleware.userNameCheck,
     middleware.userPhonenumberCheck,
     async (req, res, next) => {
@@ -145,7 +144,6 @@ router.get("/id",
 })
 //비밀번호찾기
 router.get("/pw",
-    middleware.sessionCheck,
     middleware.userIDCheck,
     middleware.userNameCheck,
     middleware.userPhonenumberCheck,
@@ -231,7 +229,6 @@ router.put("/",
             res.status(200).send();
 
         } catch (e) {
-            console.log(e.status)
             next(e);
         }
 })

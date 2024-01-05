@@ -123,7 +123,6 @@ router.delete("/:articleidx",
             "message": ""
         }
         try {
-
             const sql = "DELETE FROM class.article WHERE idx = $1 AND user_idx = $2";
             const values = [articleidx, useridx];
 

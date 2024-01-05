@@ -1,8 +1,11 @@
 
 const express = require('express');
 const session = require("express-session");
+const morgan = require('morgan');
+const logger = require("./logger");
+const { ApiLog } = require("./src/config/db");
 require('dotenv').config();
-const { secretCode, port } = process.env; // .env로부터 환경변수 불러오기
+const { secretCode, port, } = process.env; // .env로부터 환경변수 불러오기
 const app = express();
 
 app.use(session({
@@ -14,11 +17,37 @@ app.use(session({
         rolling: true
     }
 }));
-//next 에러핸들링
-// 익스프레스 쓰레기통
-// 모든api에대한 후처리를 한곳에서 가능
+
 app.use(express.json());
 
+app.use(morgan('combined'));
+// app.use(morgan('dev'));
+
+
+// log기록 기능 개발하기
+// 호출자ip주소, 호출자id, api명, 프엔이 보낸값, 반환값, 해당로그가 기입된시간
+app.use('/', async (req, res, next) => {
+
+    const apiLog = new ApiLog({
+        method: req.method,
+        route: req.url,
+        userIP: req.ip,
+        userID: req.session.id,
+        request: req.body,
+        response: null,
+        timestamp: new Date(),
+    })
+   
+    await apiLog.save();
+
+    const originalSend = res.send;
+    res.send = function (body) {
+        apiLog.response = body;
+        return originalSend.apply(res, arguments);
+    };
+
+    next();
+})
 
 
 
@@ -38,11 +67,18 @@ app.use("/article", articleApi);
 const commentApi = require("./src/routers/comment");
 app.use("/comment", commentApi);
 
+//log 기록 검색 api
+const logApi = require("./src/routers/log");
+app.use("/log", logApi)
+
+
+
+
 
 app.use((err, req, res, next) => {
 
     if (!err.status) err.status = 500;
-    
+
     res.status(err.status).send({ message: err.message });
 })
 
