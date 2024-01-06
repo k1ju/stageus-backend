@@ -1,9 +1,9 @@
-const { body, validationResult } = require("express-validator");
+const { body, param, validationResult } = require("express-validator");
 
 const sessionCheck = (req, res, next) => {
     console.log(req)
     console.log(req.session);
-    if (!req.session.idx) res.status(401).send({ message: "인증되지않은사람" });
+    if (!req.session.userIdx) res.status(401).send({ message: "인증되지않은사람" });
     else next();
 }
 

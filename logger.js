@@ -4,12 +4,12 @@ const process = require('process');
 
 const { combine, timestamp, label, printf } = winston.format;
 
-
-const logDir = `${process.cwd()}/logs`;
+// const logDir = `${process.cwd()}/logs`;
 
 const logFormat = printf(({ level, message, label, timestamp}) => {
     return `${timestamp} [${label}] ${lebel}: ${message}`;
 })
+
 
 const logger = winston.createLogger({
     level: 'info',

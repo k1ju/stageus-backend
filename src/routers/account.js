@@ -66,11 +66,11 @@ router.get("/login",
 
             const user = rs.rows[0];
 
-            req.session.idx = user.idx; // 숫자형에 trim하면 에러
-            req.session.id = user.id.trim(); // char에만 trim해주기
-            req.session.name = user.name.trim();
-            req.session.phonenumber = user.phonenumber.trim();
-            req.session.birth = user.birth;
+            req.session.userIdx = user.idx; // 숫자형에 trim하면 에러
+            req.session.userID = user.id.trim(); // char에만 trim해주기
+            req.session.userName = user.name.trim();
+            req.session.userPhonenumber = user.phonenumber.trim();
+            req.session.userBirth = user.birth;
 
             res.status(200).send();
 
@@ -172,7 +172,7 @@ router.get("/pw",
 router.get("/info",
     middleware.sessionCheck,
     async (req, res, next) => {
-        const idx = req.session.idx;
+        const idx = req.session.userIdx;
         const result = {
             "data": {}
         };
@@ -213,7 +213,7 @@ router.put("/",
     middleware.userBirthCheck,
     async (req, res, next) => {
         const { userName, userPhonenumber, birth, profile } = req.body;
-        const idx = req.session.idx
+        const idx = req.session.userIdx;
 
         try {
             const sql = "SELECT phonenumber FROM class.account WHERE phonenumber = $1";
@@ -237,7 +237,7 @@ router.put("/",
 router.delete("/",
     middleware.sessionCheck,
     async (req, res, next) => {
-        const idx = req.session.idx;
+        const idx = req.session.userIdx;
         const result = {
             "success": false,
             "message": "",

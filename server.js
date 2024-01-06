@@ -20,36 +20,37 @@ app.use(session({
 
 app.use(express.json());
 
-app.use(morgan('combined'));
-// app.use(morgan('dev'));
+
 
 
 // log기록 기능 개발하기
-// 호출자ip주소, 호출자id, api명, 프엔이 보낸값, 반환값, 해당로그가 기입된시간
-app.use('/', async (req, res, next) => {
+// 호출자ip주소, 호출자id,m api명, 프엔이 보낸값, 반환값, 해당로그가 기입된시간
+// app.use('/', async (req, res, next) => {
 
-    const apiLog = new ApiLog({
-        method: req.method,
-        route: req.url,
-        userIP: req.ip,
-        userID: req.session.id,
-        request: req.body,
-        response: null,
-        timestamp: new Date(),
-    })
-   
-    await apiLog.save();
+//     const apiLog = new ApiLog({
+//         method: req.method,
+//         route: req.url,
+//         userIP: req.ip,
+//         userID: req.session.userID,
+//         request: req.body,
+//         response: null
+//     })
 
-    const originalSend = res.send;
-    res.send = function (body) {
-        apiLog.response = body;
-        return originalSend.apply(res, arguments);
-    };
+//     await apiLog.save();
 
-    next();
-})
+//     const originalSend = res.send;
+//     res.send = function (body) {
+//         apiLog.response = body;
+//         return originalSend.apply(res, arguments);
+//     };
+
+//     next();
+// })
 
 
+
+app.use(morgan('combined'));
+// app.use(morgan('dev'));
 
 //페이지api
 const pageApi = require("./src/routers/page");
