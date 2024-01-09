@@ -1,17 +1,21 @@
 const router = require("express").Router();
-const { pool } = require("../config/db");
+const { pool } = require("../config/postgres");
 const middleware = require("../modules/validation.js");
+const loginCheck = require("../middlewares/loginCheck.js")
 
 
 //댓글쓰기
 router.post("/",
-    middleware.sessionCheck,
+    loginCheck,
+    // middleware.sessionCheck,
     middleware.articleidxBodyCheck,
     middleware.contentCheck,
     async (req, res, next) => {
 
         const { articleidx, content } = req.body;
-        const idx = req.session.userIdx;
+        // const idx = req.session.userIdx;
+        const idx =  req.user.idx;
+        console.log(idx)
 
         try {
             const sql = "INSERT INTO class.comment(content, user_idx, article_idx) VALUES ($1, $2, $3) ";
@@ -57,15 +61,17 @@ router.get("/",
 })
 //댓글수정하기
 router.put("/:commentidx",
-    middleware.sessionCheck,
+    loginCheck,
+    // middleware.sessionCheck,
     middleware.contentCheck,
     middleware.commentidxParamCheck,
     async (req, res, next) => {
 
         const commentidx = req.params.commentidx;
-        const idx = req.session.userIdx;
+        const idx =  req.user.idx;
+        // const idx = req.session.userIdx;
         const { content } = req.body;
-       
+
         try {
             const sql = "UPDATE class.comment SET content = $1 WHERE idx = $2 AND user_idx = $3 ";
             const values = [content, commentidx, idx];
@@ -79,12 +85,14 @@ router.put("/:commentidx",
 })
 //댓글삭제하기
 router.delete("/:commentidx",
-    middleware.sessionCheck,
+    loginCheck,
+    // middleware.sessionCheck,
     middleware.commentidxParamCheck,
     async (req, res, next) => {
 
         const commentidx = req.params.commentidx;
-        const idx = req.session.userIdx;
+        const idx =  req.user.idx;
+        // const idx = req.session.userIdx;
 
         try {
             const sql = "DELETE FROM class.comment WHERE idx = $1 AND user_idx = $2 ";

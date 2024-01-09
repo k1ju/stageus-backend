@@ -1,6 +1,7 @@
 const router = require("express").Router();
-const { pool } = require('../config/db.js');
+const { pool } = require('../config/postgres.js');
 const middleware = require("../modules/validation.js");
+const loginCheck = require("../middlewares/loginCheck.js")
 
 //게시글 목록 불러오기route
 router.get("/all", async (req, res, next) => {
@@ -15,6 +16,7 @@ router.get("/all", async (req, res, next) => {
             ORDER BY a.idx`; //orderby는 idx로하기!
 
         const rs = await pool.query(sql)
+
         if (rs.rowCount == 0) throw new Error("게시글없음");
         // rs.rows : select 결과 반환
         // rs.affectedRows : insert, update, delete 의 데이터 개수 반환 (mysql)
@@ -53,16 +55,18 @@ router.get("/:articleidx",
 
 //게시글 작성하기
 router.post("/",
-    middleware.sessionCheck,
+    loginCheck,
+    // middleware.sessionCheck,
     middleware.titleCheck,
     middleware.contentCheck,
     async (req, res, next) => {
 
         const { title, content } = req.body;
-        const useridx = req.session.userIdx;
+        const useridx = req.user.idx
+
+        // const useridx = req.session.userIdx;
 
         try {
-
             const sql = "INSERT INTO class.article(title,content,user_idx) VALUES ($1, $2, $3) ";
             const values = [title, content, useridx];
 
@@ -77,7 +81,8 @@ router.post("/",
 
 //게시글 수정하기
 router.put("/:articleidx",
-    middleware.sessionCheck,
+    loginCheck,
+    // middleware.sessionCheck,
     middleware.articleidxParamCheck,
     middleware.titleCheck,
     middleware.contentCheck,
@@ -85,7 +90,9 @@ router.put("/:articleidx",
     async (req, res, next) => {
 
         const { title, content } = req.body;
-        const useridx = req.session.userIdx;
+        
+        const useridx = req.user.idx;
+        // const useridx = req.session.userIdx;
         const articleidx = req.params.articleidx;
 
         try {
@@ -102,11 +109,13 @@ router.put("/:articleidx",
 
 //게시글 삭제하기
 router.delete("/:articleidx",
-    middleware.sessionCheck,
+    loginCheck,
+    // middleware.sessionCheck,
     middleware.articleidxParamCheck,
     async (req, res, next) => {
 
-        const useridx = req.session.userIdx;
+        // const useridx = req.session.userIdx;
+        const useridx = req.user.idx;
         const articleidx = req.params.articleidx;
 
         try {

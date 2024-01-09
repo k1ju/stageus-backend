@@ -1,7 +1,11 @@
 
 const router = require("express").Router();
-const { pool } = require("../config/db"); // 풀 속성이 아닌 풀 객체를 받아오는 것이므로 {pool}이아닌 pool
+const { pool } = require("../config/postgres.js"); // 풀 속성이 아닌 풀 객체를 받아오는 것이므로 {pool}이아닌 pool
 const middleware = require("../modules/validation.js");
+const jwt = require("jsonwebtoken")
+const loginCheck = require("../middlewares/loginCheck")
+
+
 // 예외처리도 미들웨어처리
 // 예외처리 fit하지않게 체이닝기법 .isnull.islengthCheck
 
@@ -10,17 +14,16 @@ const middleware = require("../modules/validation.js");
 //api에서도 next이용
 // 회원가입 api
 router.post('/',
-    middleware.userIDCheck,
+    [middleware.userIDCheck,
     middleware.userPwCheck,
     middleware.userPwCheckCheck,
     middleware.userNameCheck,
     middleware.userPhonenumberCheck,
-    middleware.userBirthCheck,
+    middleware.userBirthCheck],
     async (req, res, next) => {
         const { userID, userPw, userName, userPhonenumber, userBirth } = req.body;
 
         try {
-
             const sql1 = `SELECT * FROM class.account WHERE id = $1`;
             const sql2 = `SELECT * FROM class.account WHERE phonenumber = $1`;
             const values1 = [userID];
@@ -48,15 +51,18 @@ router.post('/',
         }
     })
 
+
 // 로그인 api
 router.get("/login",
     middleware.userIDCheck,
     middleware.userPwCheck,
     async (req, res, next) => {
         const { userID, userPw } = req.body;
+        const result = {
+            "data": {}
+        }
 
         try {
-
             const sql = "SELECT * FROM class.account WHERE id = $1 AND pw = $2";
             const values = [userID, userPw];
 
@@ -64,39 +70,50 @@ router.get("/login",
 
             if (!rs.rows || rs.rows.length == 0) throw new Error("일치하는 회원정보없음");
 
-            const user = rs.rows[0];
+            const user = rs.rows[0]
+            const idx = user.idx
+            console.log("rs의 idx:",idx)
 
-            req.session.userIdx = user.idx; // 숫자형에 trim하면 에러
-            req.session.userID = user.id.trim(); // char에만 trim해주기
-            req.session.userName = user.name.trim();
-            req.session.userPhonenumber = user.phonenumber.trim();
-            req.session.userBirth = user.birth;
+            // 토큰생성, 페이로드에는 바뀌지않는값 PK
+            const token = jwt.sign({
+                "idx": idx
+            }, process.env.secretCode, {
+                "issuer": "stageus",
+                "expiresIn": "30m"
+            })
 
-            res.status(200).send();
+            result.data.token = token;
+
+            // const user = rs.rows[0]; // rs.rows 는 배열로 반환
+            // req.session.userIdx = user.idx; // 숫자형에 trim하면 에러
+            // req.session.userID = user.id.trim(); // char에만 trim해주기
+            // req.session.userName = user.name.trim();
+            // req.session.userPhonenumber = user.phonenumber.trim();
+            // req.session.userBirth = user.birth;
+
+            res.status(200).send(result);
 
         } catch (e) {
             next(e);
         }
-})
+    })
 
 //로그아웃
 router.delete("/logout",
     middleware.sessionCheck,
     (req, res, next) => {
 
-    try {
-        req.session.destroy();
-        res.status(200).send();
-    } catch (e) {
-        next(e);
-    }
-})
+        try {
+            req.session.destroy();
+            res.status(200).send();
+        } catch (e) {
+            next(e);
+        }
+    })
 
 //id중복체크
 router.get("/idCheck",
-    middleware.sessionCheck,
     middleware.userIDCheck,
-   
     async (req, res, next) => {
 
         const userID = req.body.userID;
@@ -116,7 +133,7 @@ router.get("/idCheck",
         } catch (e) {
             next(e);
         }
-})
+    })
 //id찾기
 router.get("/id",
     middleware.userNameCheck,
@@ -141,7 +158,8 @@ router.get("/id",
         } catch (e) {
             next(e)
         }
-})
+    })
+
 //비밀번호찾기
 router.get("/pw",
     middleware.userIDCheck,
@@ -167,12 +185,18 @@ router.get("/pw",
         } catch (e) {
             next(e);
         }
-})
+    })
+
+
 //내정보보기
 router.get("/info",
-    middleware.sessionCheck,
+    loginCheck,
+    // middleware.sessionCheck,
     async (req, res, next) => {
-        const idx = req.session.userIdx;
+        console.log("api실행");
+
+        // const idx = req.session.userIdx;
+        const idx = req.user.idx;
         const result = {
             "data": {}
         };
@@ -184,9 +208,8 @@ router.get("/info",
 
             if (rs.rows.length == 0) throw new Error("일치하는 회원정보없음")
             const user = rs.rows[0]
-            console.log(user);
 
-            console.log(user.name);
+            result.data.idx = user.idx
             result.data.name = user.name.trim();  //char타입에만 trim넣어줘야한다.
             result.data.phonenumber = user.phonenumber.trim();
             result.data.birth = user.birth;
@@ -203,17 +226,19 @@ router.get("/info",
         } catch (e) {
             next(e);
         }
-})
+    })
 
 //정보수정
 router.put("/",
-    middleware.sessionCheck,
+    loginCheck,
+    // middleware.sessionCheck,
     middleware.userNameCheck,
     middleware.userPhonenumberCheck,
     middleware.userBirthCheck,
     async (req, res, next) => {
         const { userName, userPhonenumber, birth, profile } = req.body;
-        const idx = req.session.userIdx;
+        // const idx = req.session.userIdx;
+        const idx = req.user.idx;
 
         try {
             const sql = "SELECT phonenumber FROM class.account WHERE phonenumber = $1";
@@ -231,17 +256,15 @@ router.put("/",
         } catch (e) {
             next(e);
         }
-})
+    })
 
 //회원탈퇴
 router.delete("/",
-    middleware.sessionCheck,
+    loginCheck,
+    // middleware.sessionCheck,
     async (req, res, next) => {
-        const idx = req.session.userIdx;
-        const result = {
-            "success": false,
-            "message": "",
-        };
+        // const idx = req.session.userIdx;
+        const idx = req.user.idx;
 
         try {
             const sql = "DELETE FROM class.account WHERE idx = $1";
@@ -250,12 +273,12 @@ router.delete("/",
             await pool.query(sql, values)
 
             req.session.destroy();
-            res.send(result);
+            res.send();
 
         } catch (e) {
             next(e);
         }
-})
+    })
 
 module.exports = router;
 

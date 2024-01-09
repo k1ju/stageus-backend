@@ -1,17 +1,25 @@
 
 const express = require('express');
 const session = require("express-session");
-const morgan = require('morgan');
-const logger = require("./logger");
-const { ApiLog } = require("./src/config/db");
+const logger = require("./src/config/logger");
+const { Log } = require("./src/config/mongodb");
 require('dotenv').config();
-const { secretCode, port, } = process.env; // .env로부터 환경변수 불러오기
+
+const path = require("path");
+const fs = require("fs");
+const https = require("https");
 const app = express();
+const options = {
+    "key": fs.readFileSync(path.join(__dirname, "./keys/key.pem")),
+    "cert": fs.readFileSync(path.join(__dirname, "./keys/cert.pem")),
+    // "ca": ca없으니 생략
+    "passphrase": "1234"
+}
 
 app.use(session({
     resave: true,
     saveUninitialized: true,
-    secret: secretCode,
+    secret: process.env.secretCode,
     cookie: {
         maxAge: 5 * 60 * 1000,
         rolling: true
@@ -20,37 +28,69 @@ app.use(session({
 
 app.use(express.json());
 
+app.get("*", (req, res, next) => {
+    const protocol = req.protocol;
+
+    if(protocol === "http"){
+        const dest = `https://${req.hostname}:8443${req.url}`
+        return res.redirect(dest)
+    };
+    
+    next();
+})
 
 
+//로깅 직접만들기
+// app.use((req, res, next) => {
+//     const oldSend = res.send;
+//     res.send = (result) => {
+//         res.locals.result = result;
 
-// log기록 기능 개발하기
-// 호출자ip주소, 호출자id,m api명, 프엔이 보낸값, 반환값, 해당로그가 기입된시간
-// app.use('/', async (req, res, next) => {
+//         return oldSend.apply(res, [result]);
+//     }
 
-//     const apiLog = new ApiLog({
+//     res.on('finish', async () => {
+
+//         console.log("로그생성 시작")
+
+//         const logData = new Log({
+//             method: req.method,
+//             url: req.url,
+//             userIP: req.ip,
+//             userID: req.session.userID,
+//             request: req.body,
+//             response: res.locals.result,
+//             status: req.status
+//         })
+
+//         await logData.save();
+//         console.log(logData.status)
+        
+//         console.log(logData)
+//     })
+//     next();
+// })
+
+
+//winston 로깅
+// app.use((req, res, next) => {
+
+//     const logInfo = {
 //         method: req.method,
 //         route: req.url,
 //         userIP: req.ip,
-//         userID: req.session.userID,
-//         request: req.body,
-//         response: null
-//     })
+//         userID: req.session.userID || null,
+//         request: req.body || {},
+//         response: res.body || {},
+//     }
+//     // console.log(logInfo)
 
-//     await apiLog.save();
-
-//     const originalSend = res.send;
-//     res.send = function (body) {
-//         apiLog.response = body;
-//         return originalSend.apply(res, arguments);
-//     };
-
+//     logger.info('API 요청:', { metadata: logInfo });
 //     next();
 // })
 
 
 
-app.use(morgan('combined'));
-// app.use(morgan('dev'));
 
 //페이지api
 const pageApi = require("./src/routers/page");
@@ -74,8 +114,6 @@ app.use("/log", logApi)
 
 
 
-
-
 app.use((err, req, res, next) => {
 
     if (!err.status) err.status = 500;
@@ -84,11 +122,13 @@ app.use((err, req, res, next) => {
 })
 
 
+app.listen(process.env.port, '0.0.0.0', () => {
+    console.log(`${process.env.port}번 포트번호 서버실행`)
+    // logger.info(`${port}번 포트번호 서버실행222`)
+})
 
 
-
-
-app.listen(port, () => {
-    console.log(`${port}번 포트번호 서버실행`)
+https.createServer(options, app).listen(process.env.httpsPort, () => {
+    console.log(`${process.env.port}번에서 HTTP웹 서버 시행`)
 })
 
