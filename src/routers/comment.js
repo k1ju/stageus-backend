@@ -1,6 +1,6 @@
 const router = require("express").Router();
 const { pool } = require("../config/postgres");
-const middleware = require("../modules/validation.js");
+const middleware = require("../middlewares/validation.js");
 const loginCheck = require("../middlewares/loginCheck.js")
 const { body, param, query, validationResult } = require("express-validator");
 

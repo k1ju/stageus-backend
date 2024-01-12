@@ -1,8 +1,8 @@
 
 const router = require("express").Router();
 const { pool } = require("../config/postgres.js"); // 풀 속성이 아닌 풀 객체를 받아오는 것이므로 {pool}이아닌 pool
-const { validate } = require("../modules/validation.js");
-const middleware = require("../modules/validation.js");
+const { validate } = require("../middlewares/validation.js");
+const middleware = require("../middlewares/validation.js");
 
 const jwt = require("jsonwebtoken")
 const loginCheck = require("../middlewares/loginCheck")
@@ -75,6 +75,7 @@ router.get("/login",
         }
 
         try {
+            console.log("api시작")
             const sql = "SELECT * FROM class.account WHERE id = $1 AND pw = $2";
             const values = [userID, userPw];
 
@@ -83,6 +84,7 @@ router.get("/login",
             if (!rs.rows || rs.rows.length == 0) throw new Error("일치하는 회원정보없음");
 
             const user = rs.rows[0] // rs.rows 는 배열로 반환
+            console.log("user : ", user)
             const idx = user.idx
             const isadmin = user.isadmin
             // 토큰생성, 페이로드에는 바뀌지않는값 PK
@@ -96,14 +98,15 @@ router.get("/login",
 
             result.data.token = token;
 
-            req.session.userIdx = user.idx; // 숫자형에 trim하면 에러
-            req.session.userID = user.id.trim(); // char에만 trim해주기
-            req.session.userName = user.name.trim();
-            req.session.userPhonenumber = user.phonenumber.trim();
-            req.session.userBirth = user.birth;
+            req.session.regenerate(() => {
+                req.session.userIdx = user.idx; // 숫자형에 trim하면 에러
+                req.session.userID = user.id.trim(); // char에만 trim해주기
+                req.session.userName = user.name.trim();
+                req.session.userPhonenumber = user.phonenumber.trim();
+                req.session.userBirth = user.birth;
 
-            res.status(200).send(result);
-
+                res.status(200).send(result);
+            })
         } catch (e) {
             next(e);
         }
@@ -199,8 +202,8 @@ router.get("/pw",
 
 //내정보보기
 router.get("/info",
-    loginCheck,
-    // middleware.sessionCheck,
+    loginCheck(),
+    middleware.sessionCheck,
     async (req, res, next) => {
 
         // const idx = req.session.userIdx;
@@ -209,12 +212,15 @@ router.get("/info",
             "data": {}
         };
         try {
+            console.log("api실행")
             const sql = "SELECT * FROM class.account WHERE idx = $1";
             const values = [idx];
             const rs = await pool.query(sql, values)
 
             if (rs.rows.length == 0) throw new Error("일치하는 회원정보없음")
             const user = rs.rows[0]
+
+            console.log(req.session)
 
             result.data.idx = user.idx
             result.data.name = user.name.trim();  //char타입에만 trim넣어줘야한다.
@@ -236,7 +242,7 @@ router.get("/info",
 
 //정보수정
 router.put("/",
-    loginCheck,
+    loginCheck(),
     // middleware.sessionCheck,
     middleware.userNameCheck,
     middleware.userPhonenumberCheck,
@@ -266,7 +272,7 @@ router.put("/",
 
 //회원탈퇴
 router.delete("/",
-    loginCheck,
+    loginCheck(),
     // middleware.sessionCheck,
     async (req, res, next) => {
         // const idx = req.session.userIdx;

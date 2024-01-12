@@ -30,12 +30,14 @@ const validate = validations => {
 
 const userIDCheck = (req, res, next) => {
 
+
     const { userID } = req.body;
     const userIDregex = /^[a-zA-Z][a-zA-Z0-9]{0,19}$/
 
     try {
         if (userID == "" || userID == null) throw new Error("id빈값")
         if (!userID.match(userIDregex)) throw new Error("id형식불일치")
+        console.log("id체크완료")
         next()
     }
     catch (e) {
@@ -77,6 +79,7 @@ const userNameCheck = (req, res, next) => {
 
         if (userName == "" || userName == null) throw new Error("name 빈값")
         if (!userName.match(userNameregex)) throw new Error("name 형식불일치")
+        console.log("name체크완료")
         next()
     } catch (e) {
         next(e);
@@ -102,6 +105,7 @@ const userPhonenumberCheck = (req, res, next) => {
 
         if (userPhonenumber == "" || userPhonenumber == null) throw new Error("전화번호 빈값")
         if (!userPhonenumber.match(userPhonenumberregex)) throw new Error("전화번호 형식불일치")
+        console.log("전화번호체크완료") 
         next()
 
     } catch (e) {

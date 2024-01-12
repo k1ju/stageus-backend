@@ -3,6 +3,7 @@
     "description": "",
     "version": "",
     "dependencies": {
+        "connect-pg-simple": "^9.0.1",
         "dotenv": "^16.3.1",
         "express": "^4.18.2",
         "express-session": "^1.17.3",

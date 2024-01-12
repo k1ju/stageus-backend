@@ -1,9 +1,11 @@
 const jwt = require("jsonwebtoken")
 
 const loginCheck = (isAdminCheck) => {
+
     return (req, res, next) => { 
 
         const { token } = req.headers
+        var tmp = isAdminCheck
 
         try {
             // if (isAdmin !== true) throw new Error("관리자 권한필요")
