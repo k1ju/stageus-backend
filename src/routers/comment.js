@@ -2,13 +2,14 @@ const router = require("express").Router();
 const { pool } = require("../config/postgres");
 const middleware = require("../modules/validation.js");
 const loginCheck = require("../middlewares/loginCheck.js")
+const { body, param, query, validationResult } = require("express-validator");
 
 
 //댓글쓰기
 router.post("/",
     loginCheck,
     // middleware.sessionCheck,
-    middleware.articleidxBodyCheck,
+    middleware.articleidxCheck,
     middleware.contentCheck,
     async (req, res, next) => {
 
@@ -30,7 +31,7 @@ router.post("/",
 })
 //댓글 불러오기
 router.get("/",
-    middleware.articleidxBodyCheck,
+    middleware.articleidxCheck,
 
     async (req, res, next) => {
 
@@ -64,7 +65,7 @@ router.put("/:commentidx",
     loginCheck,
     // middleware.sessionCheck,
     middleware.contentCheck,
-    middleware.commentidxParamCheck,
+    middleware.commentidxCheck,
     async (req, res, next) => {
 
         const commentidx = req.params.commentidx;
@@ -87,7 +88,7 @@ router.put("/:commentidx",
 router.delete("/:commentidx",
     loginCheck,
     // middleware.sessionCheck,
-    middleware.commentidxParamCheck,
+    middleware.commentidxCheck,
     async (req, res, next) => {
 
         const commentidx = req.params.commentidx;

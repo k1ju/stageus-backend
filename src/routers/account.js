@@ -1,9 +1,12 @@
 
 const router = require("express").Router();
 const { pool } = require("../config/postgres.js"); // 풀 속성이 아닌 풀 객체를 받아오는 것이므로 {pool}이아닌 pool
+const { validate } = require("../modules/validation.js");
 const middleware = require("../modules/validation.js");
+
 const jwt = require("jsonwebtoken")
 const loginCheck = require("../middlewares/loginCheck")
+const { body, param, query, validationResult } = require("express-validator");
 
 
 // 예외처리도 미들웨어처리
@@ -20,6 +23,15 @@ router.post('/',
     middleware.userNameCheck,
     middleware.userPhonenumberCheck,
     middleware.userBirthCheck],
+    
+    // validate([
+    //     body("userID").trim().notEmpty().isLength({ min: 1, max: 20 }),
+    //     body("userPw").trim().notEmpty().isLength({ min: 1, max: 20 }),
+    //     body("userPwCheck").equals(body("userPw")),
+    //     body("userName").trim().notEmpty().isLength({ min: 1, max: 5 }),
+    //     body("userPhonenumber").trim().replace("/[^0-9]/","").notEmpty().isLength({ min: 10, max: 12 }),
+    //     body("userBirth").trim().notEmpty().isDate(),
+    // ]),
     async (req, res, next) => {
         const { userID, userPw, userName, userPhonenumber, userBirth } = req.body;
 
@@ -70,13 +82,13 @@ router.get("/login",
 
             if (!rs.rows || rs.rows.length == 0) throw new Error("일치하는 회원정보없음");
 
-            const user = rs.rows[0]
+            const user = rs.rows[0] // rs.rows 는 배열로 반환
             const idx = user.idx
-            console.log("rs의 idx:",idx)
-
+            const isadmin = user.isadmin
             // 토큰생성, 페이로드에는 바뀌지않는값 PK
             const token = jwt.sign({
-                "idx": idx
+                "idx": idx,
+                "isadmin": isadmin
             }, process.env.secretCode, {
                 "issuer": "stageus",
                 "expiresIn": "30m"
@@ -84,12 +96,11 @@ router.get("/login",
 
             result.data.token = token;
 
-            // const user = rs.rows[0]; // rs.rows 는 배열로 반환
-            // req.session.userIdx = user.idx; // 숫자형에 trim하면 에러
-            // req.session.userID = user.id.trim(); // char에만 trim해주기
-            // req.session.userName = user.name.trim();
-            // req.session.userPhonenumber = user.phonenumber.trim();
-            // req.session.userBirth = user.birth;
+            req.session.userIdx = user.idx; // 숫자형에 trim하면 에러
+            req.session.userID = user.id.trim(); // char에만 trim해주기
+            req.session.userName = user.name.trim();
+            req.session.userPhonenumber = user.phonenumber.trim();
+            req.session.userBirth = user.birth;
 
             res.status(200).send(result);
 
@@ -124,7 +135,6 @@ router.get("/idCheck",
         try {
             const sql = `SELECT idx FROM class.account WHERE id = $1`;
             const values = [userID];
-
             const rs = await pool.query(sql, values);
 
             if (rs.rows.length != 0) throw new Error("id 중복");
@@ -148,7 +158,6 @@ router.get("/id",
         try {
             const sql = "SELECT id FROM class.account WHERE name = $1 AND phonenumber = $2";
             const values = [userName, userPhonenumber];
-
             const rs = await pool.query(sql, values)
 
             if (rs.rows.length == 0) throw new Error("일치하는 id없음")
@@ -193,7 +202,6 @@ router.get("/info",
     loginCheck,
     // middleware.sessionCheck,
     async (req, res, next) => {
-        console.log("api실행");
 
         // const idx = req.session.userIdx;
         const idx = req.user.idx;
@@ -203,7 +211,6 @@ router.get("/info",
         try {
             const sql = "SELECT * FROM class.account WHERE idx = $1";
             const values = [idx];
-
             const rs = await pool.query(sql, values)
 
             if (rs.rows.length == 0) throw new Error("일치하는 회원정보없음")
@@ -214,7 +221,6 @@ router.get("/info",
             result.data.phonenumber = user.phonenumber.trim();
             result.data.birth = user.birth;
             result.data.signupDate = user.signupDate;
-            console.log(result);
 
             if (user.profile == null) {
                 result.data.profile = "내용없음";
@@ -272,7 +278,7 @@ router.delete("/",
 
             await pool.query(sql, values)
 
-            req.session.destroy();
+            // req.session.destroy();
             res.send();
 
         } catch (e) {
