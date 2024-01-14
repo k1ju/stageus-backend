@@ -24,6 +24,8 @@ router.get("/all", async (req, res, next) => {
         // rs.rowCount : insert, update, delete 의 데이터 개수 반환 (psql)
 
         result.data.article = rs.rows;
+
+        res.locals.result = result.data
         res.status(200).send(result);
 
     } catch (e) {
@@ -51,6 +53,7 @@ router.get("/:articleidx",
             const rs = await pool.query(sql, values)
             result.data.article = rs.rows;
 
+            res.locals.result = result.data
             res.status(200).send(result);
 
         } catch (e) {
@@ -115,6 +118,7 @@ router.put("/:articleidx",
 
             await pool.query(sql, values)
 
+            res.locals.result = result.data
             res.status(200).send();
         } catch (e) {
             next(e);
@@ -143,6 +147,7 @@ router.delete("/:articleidx",
 
             if (rs.rowCount == 0) throw new Error("일치하는 게시글 없습니다") //굳이
 
+            res.locals.result = result.data
             res.status(200).send();
 
         } catch (e) {

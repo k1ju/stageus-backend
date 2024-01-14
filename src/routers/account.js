@@ -4,9 +4,10 @@ const { pool } = require("../config/postgres.js"); // 풀 속성이 아닌 풀 �
 const { validate } = require("../middlewares/validation.js");
 const middleware = require("../middlewares/validation.js");
 
-const jwt = require("jsonwebtoken")
-const loginCheck = require("../middlewares/loginCheck")
+const jwt = require("jsonwebtoken");
+const loginCheck = require("../middlewares/loginCheck");
 const { body, param, query, validationResult } = require("express-validator");
+const loginUser = require("../modules/loginUser.js");
 
 
 // 예외처리도 미들웨어처리
@@ -23,7 +24,7 @@ router.post('/',
     middleware.userNameCheck,
     middleware.userPhonenumberCheck,
     middleware.userBirthCheck],
-    
+
     // validate([
     //     body("userID").trim().notEmpty().isLength({ min: 1, max: 20 }),
     //     body("userPw").trim().notEmpty().isLength({ min: 1, max: 20 }),
@@ -46,9 +47,6 @@ router.post('/',
                 pool.query(sql2, values2)
             ])
 
-            // const rs1 = await pool.query(sql1, values1); // 51ms 41 44
-            // const rs2 = await pool.query(sql2, values2);
-
             if (rs1.rows.length != 0) throw new Error("id중복");
             if (rs2.rows.length != 0) throw new Error("전화번호 중복");
 
@@ -61,8 +59,8 @@ router.post('/',
         } catch (e) {
             next(e);
         }
-    })
-
+    }
+)
 
 // 로그인 api
 router.get("/login",
@@ -75,20 +73,18 @@ router.get("/login",
         }
 
         try {
-            console.log("api시작")
             const sql = "SELECT * FROM class.account WHERE id = $1 AND pw = $2";
             const values = [userID, userPw];
-
             const rs = await pool.query(sql, values) // pool.query에는 내부적으로 커넥션을 acquire, release하는 작업이 포함되어있다.
 
             if (!rs.rows || rs.rows.length == 0) throw new Error("일치하는 회원정보없음");
 
             const user = rs.rows[0] // rs.rows 는 배열로 반환
-            console.log("user : ", user)
+
             const idx = user.idx
             const isadmin = user.isadmin
-            // 토큰생성, 페이로드에는 바뀌지않는값 PK
-            const token = jwt.sign({
+
+            const token = jwt.sign({ // 토큰생성, 페이로드에는 바뀌지않는값 PK
                 "idx": idx,
                 "isadmin": isadmin
             }, process.env.secretCode, {
@@ -97,8 +93,10 @@ router.get("/login",
             })
 
             result.data.token = token;
+            res.locals.result = result.data
 
-            req.session.regenerate(() => {
+
+            // req.session.regenerate(() => {
                 req.session.userIdx = user.idx; // 숫자형에 trim하면 에러
                 req.session.userID = user.id.trim(); // char에만 trim해주기
                 req.session.userName = user.name.trim();
@@ -106,7 +104,7 @@ router.get("/login",
                 req.session.userBirth = user.birth;
 
                 res.status(200).send(result);
-            })
+            // })
         } catch (e) {
             next(e);
         }
@@ -142,6 +140,7 @@ router.get("/idCheck",
 
             if (rs.rows.length != 0) throw new Error("id 중복");
             result.data.isDuplicated = false;
+            res.locals.result = result.data
 
         } catch (e) {
             next(e);
@@ -165,6 +164,8 @@ router.get("/id",
 
             if (rs.rows.length == 0) throw new Error("일치하는 id없음")
             result.data.id = rs.rows[0].id.trim(); // id공백제거 
+
+            res.locals.result = result.data
             res.status(200).send();
 
         } catch (e) {
@@ -191,6 +192,8 @@ router.get("/pw",
             const rs = await pool.query(sql, values)
 
             if (rs.rows.length == 0) throw new Error("일치하는 pw없음")
+
+            res.locals.result = result.data
             result.data.pw = rs.rows[0].pw.trim();
             res.status(200).send();
 
@@ -203,7 +206,7 @@ router.get("/pw",
 //내정보보기
 router.get("/info",
     loginCheck(),
-    middleware.sessionCheck,
+    // middleware.sessionCheck,
     async (req, res, next) => {
 
         // const idx = req.session.userIdx;
@@ -227,6 +230,11 @@ router.get("/info",
             result.data.phonenumber = user.phonenumber.trim();
             result.data.birth = user.birth;
             result.data.signupDate = user.signupDate;
+
+            res.locals.result = result.data
+            console.log("res.locals: ",res.locals)
+            console.log("res.locals.result: ",res.locals.result)
+
 
             if (user.profile == null) {
                 result.data.profile = "내용없음";

@@ -55,6 +55,7 @@ router.get("/",
             if(rs.rowCount == 0) throw new Error("작성된 댓글없음")
             result.data.comment = rs.rows;
 
+            res.locals.result = result.data
             res.status(200).send(result);
         } catch (e) {
             next(e);
