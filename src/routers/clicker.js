@@ -1,5 +1,4 @@
 const router = require("express").Router();
-
 const redis = require("redis").createClient();
 
 router.post("/", async (req, res) => {
@@ -12,6 +11,7 @@ router.post("/", async (req, res) => {
     await redis.connect();
 
     const number = await redis.get("number");
+    console.log("number", number)
     
     if (number) {
       // if문수정
@@ -39,12 +39,12 @@ router.get("/", async (req, res) => {
   try {
     await redis.connect();
 
+    const number = await redis.get("number");
+
     if (!number) {
       // if문수정.
       await redis.set("number", parseInt(number) + 1); //레디스는 스트링으로만 저장
     }
-
-    const number = await redis.get("number");
 
     result.success = true;
     result.number = number;

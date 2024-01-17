@@ -13,6 +13,7 @@ const loginCheck = (isAdminCheck) => {
             if (!token || token === "") throw new Error("no token");
 
             const payload = jwt.verify(token, process.env.secretCode);
+            console.log(payload)
 
             if (isAdminCheck) { // 관리자 권한 체크가 필요하다면
                 const isadmin = payload.isadmin
@@ -23,10 +24,7 @@ const loginCheck = (isAdminCheck) => {
             //     throw new Error('로그인이 풀렸습니다.');
             // }
 
-            //
-            req.user = {
-                idx: payload.idx
-            }
+            req.user = payload
             // req.user = payload 이게더좋음. isadmin, idx만 넣어주기.
 
             console.log("정상실행")

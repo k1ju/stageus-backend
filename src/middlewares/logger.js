@@ -25,7 +25,7 @@ const logger = (req, res, next) => {
 
         await logData.save();
 
-        console.log(logData)
+        // console.log(logData)
     })
     next();
 }
