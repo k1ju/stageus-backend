@@ -3,6 +3,7 @@ const { pool } = require('../config/postgres.js');
 const middleware = require('../middlewares/validation.js');
 const loginCheck = require('../middlewares/loginCheck.js');
 const { body, param, query, validationResult } = require('express-validator');
+const recordSearchHistory = require("../modules/search.js");
 
 //게시글 목록 불러오기route
 router.get('/all', async (req, res, next) => {
@@ -73,7 +74,7 @@ router.post(
     ],
     async (req, res, next) => {
         const { title, content } = req.body;
-        // const useridx = req.user.idx
+        const useridx = req.user.idx
 
         // const useridx = req.session.userIdx;
 
@@ -159,12 +160,14 @@ router.delete(
 );
 
 //게시글 검색하기
+router.get('/', loginCheck(), async (req, res, next) => {
+    console.log('api시작 ');
 
-router.get('/', async (req, res, next) => {
     const { title } = req.query;
     const result = {
         data: {},
     };
+    const {idx} = req.user
 
     try {
 
@@ -178,16 +181,15 @@ router.get('/', async (req, res, next) => {
         const rs = await pool.query(sql, values);
 
         if (rs.rowCount == 0) throw new Error('게시글없음');
-        // rs.rows : select 결과 반환
-        // rs.affectedRows : insert, update, delete 의 데이터 개수 반환 (mysql)
-        // rs.rowCount : insert, update, delete 의 데이터 개수 반환 (psql)
-
 
         console.log("게시글목록", rs.rows);
         result.data.article = rs.rows;
 
         res.locals.result = result.data;
         res.status(200).send(result);
+
+        recordSearchHistory(idx, title);
+
     } catch (e) {
         next(e);
     }
