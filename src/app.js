@@ -4,6 +4,15 @@ const pgSession = require('connect-pg-simple')(session); // 세션을 db에 저�
 const { pool } = require('./config/postgres');
 const { logModel } = require('./config/mongodb');
 const { logger } = require('./middlewares/logger');
+
+const pageApi = require('./routers/page');
+const accountApi = require('./routers/account');
+const articleApi = require('./routers/article');
+const commentRouter = require('./routers/comment');
+const logApi = require('./routers/log');
+const clickerApi = require('./routers/clicker');
+const cartApi = require('./routers/cart');
+
 require('dotenv').config();
 const app = express();
 
@@ -28,31 +37,12 @@ app.use(
 
 app.use(express.json());
 
-//페이지api
-const pageApi = require('./routers/page');
 app.use('/', pageApi);
-
-//계정api
-const accountApi = require('./routers/account');
-
 app.use('/account', logger, accountApi);
-
-//게시글 api
-const articleApi = require('./routers/article');
 app.use('/article', logger, articleApi);
-
-//댓글 api
-const commentRouter = require('./routers/comment');
 app.use('/comment', logger, commentRouter);
-
-//log 기록 검색 api
-const logApi = require('./routers/log');
 app.use('/log', logApi);
-
-const clickerApi = require('./routers/clicker');
 app.use('/clicker', clickerApi);
-
-const cartApi = require('./routers/cart');
 app.use('/cart', cartApi);
 
 app.use((req, res, next) => {
