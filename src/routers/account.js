@@ -2,9 +2,10 @@ const router = require('express').Router();
 const { pool } = require('../config/postgres.js'); // 풀 속성이 아닌 풀 객체를 받아오는 것이므로 {pool}이아닌 pool
 const { validate } = require('../middlewares/validation.js');
 const middleware = require('../middlewares/validation.js');
-const {visitorCount} = require('../modules/visitor.js');
-const redis = require("redis").createClient();
+const { visitorCount } = require('../modules/visitor.js');
+const redis = require('redis').createClient();
 
+const { env } = require('../config/env.js');
 const jwt = require('jsonwebtoken');
 const loginCheck = require('../middlewares/loginCheck');
 const { body, param, query, validationResult } = require('express-validator');
@@ -29,12 +30,16 @@ router.post(
     // ],
 
     validate([
-        body("userID").trim().notEmpty().isLength({ min: 1, max: 20 }),
-        body("userPw").trim().notEmpty().isLength({ min: 1, max: 20 }),
-        body("userPwCheck").equals(body("userPw")),
-        body("userName").trim().notEmpty().isLength({ min: 1, max: 5 }),
-        body("userPhonenumber").trim().replace("/[^0-9]/","").notEmpty().isLength({ min: 10, max: 12 }),
-        body("userBirth").trim().notEmpty().isDate(),
+        body('userID').trim().notEmpty().isLength({ min: 1, max: 20 }),
+        body('userPw').trim().notEmpty().isLength({ min: 1, max: 20 }),
+        body('userPwCheck').equals(body('userPw')),
+        body('userName').trim().notEmpty().isLength({ min: 1, max: 5 }),
+        body('userPhonenumber')
+            .trim()
+            .replace('/[^0-9]/', '')
+            .notEmpty()
+            .isLength({ min: 10, max: 12 }),
+        body('userBirth').trim().notEmpty().isDate(),
     ]),
     async (req, res, next) => {
         const { userID, userPw, userName, userPhonenumber, userBirth } =
@@ -65,7 +70,6 @@ router.post(
             await pool.query(sql3, values3);
 
             res.status(200).send();
-
         } catch (e) {
             next(e);
         }
@@ -98,7 +102,6 @@ router.get(
 
             const token = jwt.sign(
                 {
-                    // 토큰생성, 페이로드에는 바뀌지않는값 PK
                     idx: idx,
                     isadmin: isadmin,
                 },
@@ -112,29 +115,14 @@ router.get(
             result.data.token = token;
             res.locals.result = result.data;
 
-            req.session.userIdx = user.idx; // 숫자형에 trim하면 에러
-            req.session.userID = user.id.trim(); // char에만 trim해주기
-            req.session.userName = user.name.trim();
-            req.session.userPhonenumber = user.phonenumber.trim();
-            req.session.userBirth = user.birth;
+            await visitorCount(userID);
 
             res.status(200).send(result);
-            visitorCount(userID)
         } catch (e) {
             next(e);
         }
     }
 );
-
-//로그아웃
-router.delete('/logout', middleware.sessionCheck, (req, res, next) => {
-    try {
-        req.session.destroy();
-        res.status(200).send();
-    } catch (e) {
-        next(e);
-    }
-});
 
 //id중복체크
 router.get('/idCheck', middleware.userIDCheck, async (req, res, next) => {
@@ -219,7 +207,6 @@ router.get(
     loginCheck(),
     // middleware.sessionCheck,
     async (req, res, next) => {
-        // const idx = req.session.userIdx;
         const idx = req.user.idx;
         const result = {
             data: {},
@@ -232,8 +219,6 @@ router.get(
 
             if (rs.rows.length == 0) throw new Error('일치하는 회원정보없음');
             const user = rs.rows[0];
-
-            console.log(req.session);
 
             result.data.idx = user.idx;
             result.data.name = user.name.trim(); //char타입에만 trim넣어줘야한다.
@@ -267,7 +252,6 @@ router.put(
     middleware.userBirthCheck,
     async (req, res, next) => {
         const { userName, userPhonenumber, birth, profile } = req.body;
-        // const idx = req.session.userIdx;
         const idx = req.user.idx;
 
         try {
@@ -296,7 +280,6 @@ router.delete(
     loginCheck(),
     // middleware.sessionCheck,
     async (req, res, next) => {
-        // const idx = req.session.userIdx;
         const idx = req.user.idx;
 
         try {
@@ -305,7 +288,6 @@ router.delete(
 
             await pool.query(sql, values);
 
-            // req.session.destroy();
             res.send();
         } catch (e) {
             next(e);
@@ -313,48 +295,27 @@ router.delete(
     }
 );
 
-
-router.get("/visitor", async (req, res, next) => {
+router.get('/visitor', async (req, res, next) => {
     const result = {
-        "data":{}
-    }
+        data: {},
+    };
 
     try {
-      await redis.connect();
-  
-      const today = new Date().toISOString().substring(0,10)
+        await redis.connect();
 
-      let visitor = await redis.sMembers(`visitor${today}`) || 0;
-      let visitorNumber = await redis.sCard(`visitor${today}`)
+        const today = new Date().toISOString().substring(0, 10);
 
-      result.data.visitor = visitor
-      result.data.visitorNumber = visitorNumber 
+        let visitor = (await redis.sMembers(`visitor${today}`)) || 0;
+        let visitorNumber = await redis.sCard(`visitor${today}`);
 
-      redis.disconnect();
-      res.status(200).send(result);
-  
+        result.data.visitor = visitor;
+        result.data.visitorNumber = visitorNumber;
+
+        redis.disconnect();
+        res.status(200).send(result);
     } catch (e) {
-      next(e);
-    } 
+        next(e);
+    }
 });
 
 module.exports = router;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

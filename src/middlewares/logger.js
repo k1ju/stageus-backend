@@ -16,16 +16,19 @@ const logger = (req, res, next) => {
             method: req.method,
             url: req.url,
             userIP: req.ip,
-            userID: req.session.userID,
+            // userID: req.user.userID,
             request: req.body,
             response: res.locals.result,
             status: res.statusCode,
             errMessage: res.locals.message // 스택트레이스도 넣기!
         })
 
+        // console.log("로그생성완료");
+
         await logData.save();
 
-        // console.log(logData)
+        console.log("로그생성완료");
+
     })
     next();
 }

@@ -22,7 +22,7 @@ const visitorCount = async (userID) => {
 
         const today = new Date().toISOString().slice(0,10)
 
-        await redis.sAdd(`visitor${today}`, `${userID}`)
+        await redis.zAdd(`visitor${today}`, timestamp, `${userID}`)
 
         // const num = await redis.sCard(`visitor${today}`)
         // const expireTime =  
@@ -39,7 +39,7 @@ const visitorCount = async (userID) => {
         redis.disconnect()
 
     } catch (e) {
-        console.log("에러발생")
+        console.log("에러발생", e)
     }
 }
 

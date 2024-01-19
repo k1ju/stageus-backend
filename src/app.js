@@ -1,8 +1,6 @@
 const express = require('express');
-const session = require('express-session');
-const pgSession = require('connect-pg-simple')(session); // 세션을 db에 저장
 const { pool } = require('./config/postgres');
-const { logModel } = require('./config/mongodb');
+// const { logModel } = require('./config/mongodb');
 const { logger } = require('./middlewares/logger');
 
 const pageApi = require('./routers/page');
@@ -13,27 +11,26 @@ const logApi = require('./routers/log');
 const clickerApi = require('./routers/clicker');
 const cartApi = require('./routers/cart');
 
-require('dotenv').config();
 const app = express();
 
-app.use(
-    session({
-        store: new pgSession({
-            pool: pool,
-            createTableIfMissing: true,
-            schemaName: 'class',
-            tableName: 'user_session',
-        }), // 세션을 db에 저장
-        resave: true,
-        saveUninitialized: true,
-        secret: process.env.secretCode,
-        cookie: {
-            maxAge: 5 * 60 * 1000,
-            rolling: true,
-            id: 1,
-        },
-    })
-);
+// app.use(
+//     session({
+//         store: new pgSession({
+//             pool: pool,
+//             createTableIfMissing: true,
+//             schemaName: 'class',
+//             tableName: 'user_session',
+//         }), // 세션을 db에 저장
+//         resave: true,
+//         saveUninitialized: true,
+//         secret: process.env.secretCode,
+//         cookie: {
+//             maxAge: 5 * 60 * 1000,
+//             rolling: true,
+//             id: 1,
+//         },
+//     })
+// );
 
 app.use(express.json());
 
