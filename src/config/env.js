@@ -11,6 +11,10 @@ const env = {
 
     MONGODB_URI : process.env.MONGODB_URI,
 
+    REDIS_HOST: process.env.REDIS_HOST,
+    REDIS_PORT: process.env.REDIS_PORT,
+    REDIS_PW: process.env.REDIS_PW,
+
     secretCode : process.env.secretCode
 };
 
