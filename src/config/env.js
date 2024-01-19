@@ -10,6 +10,8 @@ const env = {
     PSQL_PW: process.env.PSQL_PW,
 
     MONGODB_URI : process.env.MONGODB_URI,
+
+    secretCode : process.env.secretCode
 };
 
 module.exports = env;

@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const loginUser = require('../modules/loginUser');
-const { env } = require('../config/env');
+const env  = require('../config/env');
 
 const loginCheck = (isAdminCheck) => {
     return (req, res, next) => {

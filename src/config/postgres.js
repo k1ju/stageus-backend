@@ -1,6 +1,7 @@
 const { Pool } = require('pg');
 const env = require('./env');
 
+
 const psqlDBconfig = {
     host: env.PSQL_HOST,
     port: env.PSQL_PORT,
@@ -21,10 +22,10 @@ const pool = new Pool(psqlDBconfig);
 
 pool.query('SELECT now()')
     .then((result) => {
-        console.log('db연결');
+        console.log('pSQL db연결');
     })
     .catch((e) => {
-        console.log('연결실패', e);
+        console.log('pSQL연결실패', e);
     });
 
 module.exports = {

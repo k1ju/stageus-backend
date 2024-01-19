@@ -13,24 +13,6 @@ const cartApi = require('./routers/cart');
 
 const app = express();
 
-// app.use(
-//     session({
-//         store: new pgSession({
-//             pool: pool,
-//             createTableIfMissing: true,
-//             schemaName: 'class',
-//             tableName: 'user_session',
-//         }), // 세션을 db에 저장
-//         resave: true,
-//         saveUninitialized: true,
-//         secret: process.env.secretCode,
-//         cookie: {
-//             maxAge: 5 * 60 * 1000,
-//             rolling: true,
-//             id: 1,
-//         },
-//     })
-// );
 
 app.use(express.json());
 

@@ -7,10 +7,10 @@ const recordSearchHistory = async (idx, searchKeyword) => {
         console.log('idx, searchKeyword: ', idx, searchKeyword);
         redis.connect();
 
-        const timestamp = Date.getTime();
+        const timestamp = new Date().getTime();
         console.log('timestamp: ', timestamp);
 
-        // idx = idx.toString()
+        // idx = idx.toString();
         console.log('idx: ', idx);
 
 
