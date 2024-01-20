@@ -24,10 +24,10 @@ const logger = (req, res, next) => {
         })
 
         // console.log("로그생성완료");
+        // console.log(logData)
 
         await logData.save();
 
-        console.log("로그생성완료");
 
     })
     next();

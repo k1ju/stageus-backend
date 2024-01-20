@@ -3,7 +3,7 @@ const { pool } = require('../config/postgres.js'); // 풀 속성이 아닌 풀 �
 const { validate } = require('../middlewares/validation.js');
 const middleware = require('../middlewares/validation.js');
 const { visitorCount } = require('../modules/visitor.js');
-const redis = require('redis').createClient();
+const redisClient = require('../config/redis');
 
 const { env } = require('../config/env.js');
 const jwt = require('jsonwebtoken');
@@ -301,17 +301,15 @@ router.get('/visitor', async (req, res, next) => {
     };
 
     try {
-        await redis.connect();
 
         const today = new Date().toISOString().substring(0, 10);
 
-        let visitor = (await redis.sMembers(`visitor${today}`)) || 0;
-        let visitorNumber = await redis.sCard(`visitor${today}`);
+        let visitor = (await redisClient.sMembers(`visitor${today}`)) || 0;
+        let visitorNumber = await redisClient.sCard(`visitor${today}`);
 
         result.data.visitor = visitor;
         result.data.visitorNumber = visitorNumber;
 
-        redis.disconnect();
         res.status(200).send(result);
     } catch (e) {
         next(e);

@@ -161,7 +161,6 @@ router.delete(
 
 //게시글 검색하기
 router.get('/', loginCheck(), async (req, res, next) => {
-    console.log('api시작 ');
 
     const { title } = req.query;
     const result = {
@@ -170,7 +169,6 @@ router.get('/', loginCheck(), async (req, res, next) => {
     const {idx} = req.user
 
     try {
-
         const sql = `SELECT a.idx, title, write_date, u.name
             FROM class.article a 
             JOIN class.account u ON a.user_idx = u.idx
@@ -182,13 +180,15 @@ router.get('/', loginCheck(), async (req, res, next) => {
 
         if (rs.rowCount == 0) throw new Error('게시글없음');
 
-        console.log("게시글목록", rs.rows);
         result.data.article = rs.rows;
 
-        res.locals.result = result.data;
-        res.status(200).send(result);
+        res.locals.result = result.data.article;
 
-        recordSearchHistory(idx, title);
+        let searchHistory =  await recordSearchHistory(idx, title);
+        searchHistory = searchHistory.reverse()
+        result.data = searchHistory
+
+        res.status(200).send(result);
 
     } catch (e) {
         next(e);
