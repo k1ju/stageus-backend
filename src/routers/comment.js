@@ -8,9 +8,9 @@ const { body, param, query, validationResult } = require('express-validator');
 commentRouter.post(
     '/',
     loginCheck,
-    // middleware.sessionCheck,
-    middleware.articleidxCheck,
-    middleware.contentCheck,
+    // middleware.articleidxCheck,
+    // middleware.contentCheck,
+
     async (req, res, next) => {
         const { articleidx, content } = req.body;
         // const idx = req.session.userIdx;
@@ -33,7 +33,7 @@ commentRouter.post(
 //댓글 불러오기
 commentRouter.get(
     '/',
-    middleware.articleidxCheck,
+    // middleware.articleidxCheck,
 
     async (req, res, next) => {
         const articleidx = req.body.articleidx;
@@ -67,9 +67,8 @@ commentRouter.get(
 commentRouter.put(
     '/:commentidx',
     loginCheck,
-    // middleware.sessionCheck,
-    middleware.contentCheck,
-    middleware.commentidxCheck,
+    // middleware.contentCheck,
+    // middleware.commentidxCheck,
     async (req, res, next) => {
         const commentidx = req.params.commentidx;
         const idx = req.user.idx;
@@ -93,8 +92,7 @@ commentRouter.put(
 commentRouter.delete(
     '/:commentidx',
     loginCheck,
-    // middleware.sessionCheck,
-    middleware.commentidxCheck,
+    // middleware.commentidxCheck,
     async (req, res, next) => {
         const commentidx = req.params.commentidx;
         const idx = req.user.idx;

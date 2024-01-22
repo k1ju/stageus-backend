@@ -8,8 +8,8 @@ const psqlDBconfig = {
     user: env.PSQL_USER,
     password: env.PSQL_PW,
     database: env.PSQL_DATABASE,
-    // idleTimeoutMillis: 10 * 1000,
-    // connectionTimeoutMillis: 15 * 1000,
+    idleTimeoutMillis: 10 * 1000,
+    connectionTimeoutMillis: 15 * 1000,
 };
 
 const pool = new Pool(psqlDBconfig);

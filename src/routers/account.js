@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const { pool } = require('../config/postgres.js'); // 풀 속성이 아닌 풀 객체를 받아오는 것이므로 {pool}이아닌 pool
 const { validate } = require('../middlewares/validation.js');
-const middleware = require('../middlewares/validation.js');
 const { visitorCount } = require('../modules/visitor.js');
 const redisClient = require('../config/redis');
 
@@ -20,30 +19,20 @@ const loginUser = require('../modules/loginUser.js');
 // 회원가입 api
 router.post(
     '/',
-    // [
-    //     middleware.userIDCheck,
-    //     middleware.userPwCheck,
-    //     middleware.userPwCheckCheck,
-    //     middleware.userNameCheck,
-    //     middleware.userPhonenumberCheck,
-    //     middleware.userBirthCheck,
-    // ],
-
     validate([
         body('userID').trim().notEmpty().isLength({ min: 1, max: 20 }),
         body('userPw').trim().notEmpty().isLength({ min: 1, max: 20 }),
-        body('userPwCheck').equals(body('userPw')),
+        body('userPwCheck').custom(( value, {req} ) => {
+            return value === req.body.userPw
+        }),
         body('userName').trim().notEmpty().isLength({ min: 1, max: 5 }),
-        body('userPhonenumber')
-            .trim()
-            .replace('/[^0-9]/', '')
-            .notEmpty()
-            .isLength({ min: 10, max: 12 }),
+        body('userPhonenumber').trim().customSanitizer((value) => value.replace(/[^0-9]/g, '')).isLength({ min: 10, max: 12 }),
         body('userBirth').trim().notEmpty().isDate(),
     ]),
     async (req, res, next) => {
-        const { userID, userPw, userName, userPhonenumber, userBirth } =
-            req.body;
+        const { userID, userPw, userName, userPhonenumber, userBirth } = req.body;
+
+        console.log(userPhonenumber);
 
         try {
             const sql1 = `SELECT * FROM class.account WHERE id = $1`;
@@ -79,8 +68,10 @@ router.post(
 // 로그인 api
 router.get(
     '/login',
-    middleware.userIDCheck,
-    middleware.userPwCheck,
+    validate([
+        body('userID').trim().notEmpty().isLength({ min: 1, max: 20 }),
+        body('userPw').trim().notEmpty().isLength({ min: 1, max: 20 }),
+    ]),
     async (req, res, next) => {
         const { userID, userPw } = req.body;
         const result = {
@@ -125,10 +116,14 @@ router.get(
 );
 
 //id중복체크
-router.get('/idCheck', middleware.userIDCheck, async (req, res, next) => {
-    const userID = req.body.userID;
-    const result = {
-        data: {},
+router.get('/idCheck',
+    validate([
+        body('userID').trim().notEmpty().isLength({ min: 1, max: 20 }),
+    ]),
+    async (req, res, next) => {
+        const userID = req.body.userID;
+        const result = {
+            data: {},
     };
 
     try {
@@ -146,8 +141,10 @@ router.get('/idCheck', middleware.userIDCheck, async (req, res, next) => {
 //id찾기
 router.get(
     '/id',
-    middleware.userNameCheck,
-    middleware.userPhonenumberCheck,
+    validate([
+        body('userName').trim().isLength({ min: 1, max: 5 }),
+        body('userPhonenumber').trim().replace('/[^0-9]/', '').isLength({ min: 10, max: 12 }),
+    ]),
     async (req, res, next) => {
         const { userName, userPhonenumber } = req.body;
         const result = {
@@ -174,9 +171,12 @@ router.get(
 //비밀번호찾기
 router.get(
     '/pw',
-    middleware.userIDCheck,
-    middleware.userNameCheck,
-    middleware.userPhonenumberCheck,
+    validate([
+        body('userID').trim().isLength({ min: 1, max: 20 }),
+        body('userName').trim().isLength({ min: 1, max: 5 }),
+        body('userPhonenumber').trim().replace('/[^0-9]/', '').isLength({ min: 10, max: 12 }),
+       
+    ]),
     async (req, res, next) => {
         const { userID, userName, userPhonenumber } = req.body;
         const result = {
@@ -205,7 +205,6 @@ router.get(
 router.get(
     '/info',
     loginCheck(),
-    // middleware.sessionCheck,
     async (req, res, next) => {
         const idx = req.user.idx;
         const result = {
@@ -246,12 +245,13 @@ router.get(
 router.put(
     '/',
     loginCheck(),
-    // middleware.sessionCheck,
-    middleware.userNameCheck,
-    middleware.userPhonenumberCheck,
-    middleware.userBirthCheck,
+    validate([
+        body('userName').trim().isLength({ min: 1, max: 5 }),
+        body('userPhonenumber').trim().replace('/[^0-9]/', '').isLength({ min: 10, max: 12 }),
+        body('userBirth').trim().isDate(),
+    ]),
     async (req, res, next) => {
-        const { userName, userPhonenumber, birth, profile } = req.body;
+        const { userName, userPhonenumber, userBirth, profile } = req.body;
         const idx = req.user.idx;
 
         try {
@@ -264,7 +264,7 @@ router.put(
 
             const sql2 =
                 'UPDATE class.account SET name = $1, phonenumber = $2, birth = $3, profile = $4 WHERE idx = $5';
-            const values2 = [userName, userPhonenumber, birth, profile, idx];
+            const values2 = [userName, userPhonenumber, userBirth, profile, idx];
 
             await pool.query(sql2, values2);
             res.status(200).send();
@@ -278,7 +278,6 @@ router.put(
 router.delete(
     '/',
     loginCheck(),
-    // middleware.sessionCheck,
     async (req, res, next) => {
         const idx = req.user.idx;
 
@@ -301,7 +300,6 @@ router.get('/visitor', async (req, res, next) => {
     };
 
     try {
-
         const today = new Date().toISOString().substring(0, 10);
 
         let visitor = (await redisClient.sMembers(`visitor${today}`)) || 0;

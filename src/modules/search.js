@@ -15,7 +15,7 @@ const recordSearchHistory = async (idx, searchKeyword) => {
             await redisClient.ZPOPMIN(`searchHistory${idx}`)
         }
 
-        const rs = await redisClient.zRange(`searchHistory${idx}`,0,-1,'WHTHSCORES')
+        const rs = await redisClient.zRange(`searchHistory${idx}`,0,-1,'WITHSCORES')
         
         return rs        
 

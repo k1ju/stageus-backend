@@ -7,21 +7,18 @@ const sessionCheck = (req, res, next) => {
 
 const validate = validations => {
     return async (req, res, next) => {
-        // validations.forEach((elem) => {
-        //     const result = await elem.run(req)
-        //     if(result.errors.length) break;
-        // })
 
         for (let validation of validations) {
             const result = await validation.run(req)
             if (result.errors.length) break;
-
         }
 
         //체이닝된 조건식들을 비동기처리하여 run(req) 해준뒤, 그결과를 변수값에 validationResult(req)로 받아준다
 
 
         const errors = validationResult(req);
+
+        console.log("errors :::::: ",errors);
         if (!errors.isEmpty()) res.status(400).send();
         else next()
     }

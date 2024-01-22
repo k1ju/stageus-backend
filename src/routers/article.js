@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { pool } = require('../config/postgres.js');
-const middleware = require('../middlewares/validation.js');
+const { validate } = require('../middlewares/validation.js');
+
 const loginCheck = require('../middlewares/loginCheck.js');
 const { body, param, query, validationResult } = require('express-validator');
 const recordSearchHistory = require("../modules/search.js");
@@ -36,7 +37,6 @@ router.get('/all', async (req, res, next) => {
 router.get(
     '/:articleidx',
 
-    middleware.articleidxCheck,
     // param("articleidx").trim().notEmpty(),
     async (req, res, next) => {
         const articleidx = req.params.articleidx;
@@ -98,8 +98,6 @@ router.post(
 router.put(
     '/:articleidx',
     loginCheck,
-    // middleware.sessionCheck,
-    middleware.articleidxCheck,
     // param("articleidx").trim().notEmpty(),
     body('title').trim().notEmpty(),
     body('content').trim().notEmpty(),
@@ -132,7 +130,6 @@ router.put(
 router.delete(
     '/:articleidx',
     loginCheck,
-    // middleware.sessionCheck,
     param('articleidx').trim().notEmpty(),
 
     async (req, res, next) => {
@@ -183,6 +180,7 @@ router.get('/', loginCheck(), async (req, res, next) => {
         result.data.article = rs.rows;
 
         res.locals.result = result.data.article;
+
 
         let searchHistory =  await recordSearchHistory(idx, title);
         searchHistory = searchHistory.reverse()

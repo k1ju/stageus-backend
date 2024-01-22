@@ -22,7 +22,7 @@ const visitorCount = async (userID) => {
 
         const today = new Date().toISOString().slice(0,10)
 
-        await redis.zAdd(`visitor${today}`, timestamp, `${userID}`)
+        await redis.zAdd(`visitor${today}`, timestamp, `${userID}`) //idx
 
         // const num = await redis.sCard(`visitor${today}`)
         // const expireTime =  
