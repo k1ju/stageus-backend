@@ -22,9 +22,6 @@ router.post(
     validate([
         body('userID').trim().notEmpty().isLength({ min: 1, max: 20 }),
         body('userPw').trim().notEmpty().isLength({ min: 1, max: 20 }),
-        body('userPwCheck').custom((value, { req }) => {
-            return value === req.body.userPw;
-        }),
         body('userName').trim().notEmpty().isLength({ min: 1, max: 5 }),
         body('userPhonenumber')
             .trim()
@@ -44,21 +41,13 @@ router.post(
 
             const duplicatedAccount = selectAccountSqlResult.rows[0];
 
-            if (duplicatedAccount) {
-            }
+            if (duplicatedAccount) throw new Error('id 혹은 전화번호 중복');
 
-            if (rs1.rows.length !== 0) throw new Error('id중복');
-            if (rs2.rows.length !== 0) throw new Error('전화번호 중복');
-
-            const sql3 = `INSERT INTO class.account(id, pw, name, phonenumber, birth) VALUES ($1, $2, $3, $4, $5)`;
-            const values3 = [
-                userID,
-                userPw,
-                userName,
-                userPhonenumber,
-                userBirth,
-            ];
-            await pool.query(sql3, values3);
+            await pool.query(
+                `INSERT INTO class.account(id, pw, name, phonenumber, birth) 
+                VALUES ($1, $2, $3, $4, $5)`,
+                [userID, userPw, userName, userPhonenumber, userBirth]
+            );
 
             res.status(200).send();
         } catch (e) {
@@ -81,22 +70,20 @@ router.get(
         };
 
         try {
-            const sql = 'SELECT * FROM class.account WHERE id = $1 AND pw = $2';
-            const values = [userID, userPw];
-            const rs = await pool.query(sql, values); // pool.query에는 내부적으로 커넥션을 acquire, release하는 작업이 포함되어있다.
+            const selectAccountSqlResult = await pool.query(
+                // pool.query에는 내부적으로 커넥션을 acquire, release하는 작업이 포함되어있다.
+                `SELECT idx, isadmin FROM class.account WHERE id = $1 AND pw = $2`,
+                [userID, userPw]
+            );
 
-            if (!rs.rows || rs.rows.length == 0)
-                throw new Error('일치하는 회원정보없음');
+            const selectedAccount = selectAccountSqlResult.rows[0];
 
-            const user = rs.rows[0]; // rs.rows 는 배열로 반환
-
-            const idx = user.idx;
-            const isadmin = user.isadmin;
+            if (!selectedAccount) throw new Error('일치하는 회원정보없음');
 
             const token = jwt.sign(
                 {
-                    idx: idx,
-                    isadmin: isadmin,
+                    idx: selectedAccount.idx,
+                    isadmin: selectedAccount.isadmin,
                 },
                 process.env.secretCode,
                 {
@@ -128,11 +115,15 @@ router.get(
         };
 
         try {
-            const sql = `SELECT idx FROM class.account WHERE id = $1`;
-            const values = [userID];
-            const rs = await pool.query(sql, values);
+            const selectAccountSqlResult = await pool.query(
+                `SELECT idx FROM class.account WHERE id = $1`,
+                [userID]
+            );
 
-            if (rs.rows.length != 0) throw new Error('id 중복');
+            const duplicatedAccount = selectAccountSqlResult.rows[0];
+
+            if (duplicatedAccount) throw new Error('id 중복');
+
             result.data.isDuplicated = false;
             res.locals.result = result.data;
         } catch (e) {
@@ -147,7 +138,7 @@ router.get(
         body('userName').trim().isLength({ min: 1, max: 5 }),
         body('userPhonenumber')
             .trim()
-            .customSanitizer((value) => value.replace(/[^0-9]/g, ''))
+            .customSanitizer((value) => value.replace(/[^0-9]/g, '')) // 하이픈 제거
             .isLength({ min: 10, max: 12 }),
     ]),
     async (req, res, next) => {
@@ -157,10 +148,10 @@ router.get(
         };
 
         try {
-            const sql =
-                'SELECT id FROM class.account WHERE name = $1 AND phonenumber = $2';
-            const values = [userName, userPhonenumber];
-            const selectQueryResult = await pool.query(sql, values);
+            const selectQueryResult = await pool.query(
+                'SELECT id FROM class.account WHERE name = $1 AND phonenumber = $2',
+                [userName, userPhonenumber]
+            );
 
             const foundAccount = selectQueryResult.rows[0];
 
@@ -183,7 +174,7 @@ router.get(
         body('userName').trim().isLength({ min: 1, max: 5 }),
         body('userPhonenumber')
             .trim()
-            .customSanitizer((value) => value.replace(/[^0-9]/g, ''))
+            .customSanitizer((value) => value.replace(/[^0-9]/g, '')) //하이픈제거
             .isLength({ min: 10, max: 12 }),
     ]),
     async (req, res, next) => {
@@ -193,16 +184,19 @@ router.get(
         };
 
         try {
-            const sql =
-                'SELECT pw FROM class.account WHERE id = $1 AND name = $2 AND phonenumber = $3';
-            const values = [userID, userName, userPhonenumber];
+            const selectAccountSqlResult = await pool.query(
+                'SELECT pw FROM class.account WHERE id = $1 AND name = $2 AND phonenumber = $3',
+                [userID, userName, userPhonenumber]
+            );
 
-            const rs = await pool.query(sql, values);
+            const foundAccount = selectAccountSqlResult.rows[0];
 
-            if (rs.rows.length == 0) throw new Error('일치하는 pw없음');
+            if (foundAccount) throw new Error('일치하는 pw없음');
+
+            result.data.pw = foundAccount.pw.trim();
 
             res.locals.result = result.data;
-            result.data.pw = rs.rows[0].pw.trim();
+
             res.status(200).send();
         } catch (e) {
             next(e);
@@ -212,34 +206,28 @@ router.get(
 
 //내정보보기
 router.get('/info', loginCheck(), async (req, res, next) => {
-    const idx = req.user.idx;
+    const user = req.user;
     const result = {
         data: {},
     };
     try {
-        console.log('api실행');
-        const sql = 'SELECT * FROM class.account WHERE idx = $1';
-        const values = [idx];
-        const rs = await pool.query(sql, values);
+        const selectAccountSqlResult = await pool.query(
+            `SELECT * FROM class.account WHERE idx = $1`,
+            [idx]
+        );
 
-        if (rs.rows.length == 0) throw new Error('일치하는 회원정보없음');
-        const user = rs.rows[0];
+        const foundAccount = selectAccountSqlResult.rows[0];
 
-        result.data.idx = user.idx;
-        result.data.name = user.name.trim(); //char타입에만 trim넣어줘야한다.
-        result.data.phonenumber = user.phonenumber.trim();
-        result.data.birth = user.birth;
-        result.data.signupDate = user.signupDate;
+        if (foundAccount) throw new Error('일치하는 회원정보없음');
+
+        result.data.idx = foundAccount.idx;
+        result.data.name = foundAccount.name.trim(); //char타입에만 trim넣어줘야한다.
+        result.data.phonenumber = foundAccount.phonenumber.trim();
+        result.data.birth = foundAccount.birth;
+        result.data.signupDate = foundAccount.signupDate;
 
         res.locals.result = result.data;
-        console.log('res.locals: ', res.locals);
-        console.log('res.locals.result: ', res.locals.result);
 
-        if (user.profile == null) {
-            result.data.profile = '내용없음';
-        } else {
-            result.data.profile = user.profile;
-        }
         res.status(200).send(result);
     } catch (e) {
         next(e);
@@ -254,33 +242,29 @@ router.put(
         body('userName').trim().isLength({ min: 1, max: 5 }),
         body('userPhonenumber')
             .trim()
-            .customSanitizer((value) => value.replace(/[^0-9]/g, ''))
+            .customSanitizer((value) => value.replace(/[^0-9]/g, '')) // 하이픈 제거
             .isLength({ min: 10, max: 12 }),
         body('userBirth').trim().isDate(),
     ]),
     async (req, res, next) => {
         const { userName, userPhonenumber, userBirth, profile } = req.body;
-        const idx = req.user.idx;
+        const user = req.user;
 
         try {
-            const sql =
-                'SELECT phonenumber FROM class.account WHERE phonenumber = $1';
-            const values = [userPhonenumber];
-            const rs = await pool.query(sql, values);
+            const selectPhonenumberSqlResult = await pool.query(
+                'SELECT phonenumber FROM class.account WHERE phonenumber = $1',
+                [userPhonenumber]
+            );
 
-            if (rs.rows.length != 0) throw new Error('연락처 중복');
+            const duplicatedPhonenumber = selectPhonenumberSqlResult;
 
-            const sql2 =
-                'UPDATE class.account SET name = $1, phonenumber = $2, birth = $3, profile = $4 WHERE idx = $5';
-            const values2 = [
-                userName,
-                userPhonenumber,
-                userBirth,
-                profile,
-                idx,
-            ];
+            if (duplicatedPhonenumber) throw new Error('연락처 중복');
 
-            await pool.query(sql2, values2);
+            await pool.query(
+                'UPDATE class.account SET name = $1, phonenumber = $2, birth = $3, profile = $4 WHERE idx = $5',
+                [userName, userPhonenumber, userBirth, profile, idx]
+            );
+
             res.status(200).send();
         } catch (e) {
             next(e);
@@ -293,12 +277,12 @@ router.delete('/', loginCheck(), async (req, res, next) => {
     const idx = req.user.idx;
 
     try {
-        const sql = 'DELETE FROM class.account WHERE idx = $1';
-        const values = [idx];
+        await pool.query(
+            'DELETE FROM class.account WHERE idx = $1', 
+            [idx]
+        );
 
-        await pool.query(sql, values);
-
-        res.send();
+        res.status(200).send();
     } catch (e) {
         next(e);
     }
