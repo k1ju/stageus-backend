@@ -7,7 +7,7 @@ const redisClient = require('../config/redis');
 const { env } = require('../config/env.js');
 const jwt = require('jsonwebtoken');
 const loginCheck = require('../middlewares/loginCheck');
-const { body, param, query, validationResult } = require('express-validator');
+const { body } = require('express-validator');
 const loginUser = require('../modules/loginUser.js');
 
 // 예외처리도 미들웨어처리

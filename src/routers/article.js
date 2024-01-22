@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { pool } = require('../config/postgres.js');
 const { validate } = require('../middlewares/validation.js');
 const loginCheck = require('../middlewares/loginCheck.js');
-const { body, param, query, validationResult } = require('express-validator');
+const { body, param } = require('express-validator');
 const recordSearchHistory = require('../modules/search.js');
 
 //게시글 목록 불러오기route
