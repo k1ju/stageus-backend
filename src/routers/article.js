@@ -1,10 +1,9 @@
 const router = require('express').Router();
 const { pool } = require('../config/postgres.js');
 const { validate } = require('../middlewares/validation.js');
-
 const loginCheck = require('../middlewares/loginCheck.js');
 const { body, param, query, validationResult } = require('express-validator');
-const recordSearchHistory = require("../modules/search.js");
+const recordSearchHistory = require('../modules/search.js');
 
 //게시글 목록 불러오기route
 router.get('/all', async (req, res, next) => {
@@ -13,19 +12,15 @@ router.get('/all', async (req, res, next) => {
     };
 
     try {
-        const sql = `SELECT a.idx, title, write_date, u.name
+        const selectQueryResult = await pool.query(
+            `SELECT a.idx, title, write_date, u.name
             FROM class.article a 
             JOIN class.account u ON a.user_idx = u.idx 
-            ORDER BY a.idx`; //orderby는 idx로하기!
+            ORDER BY a.idx`
+        );
+        const articleList = selectQueryResult.rows;
 
-        const rs = await pool.query(sql);
-
-        if (rs.rowCount == 0) throw new Error('게시글없음');
-        // rs.rows : select 결과 반환
-        // rs.affectedRows : insert, update, delete 의 데이터 개수 반환 (mysql)
-        // rs.rowCount : insert, update, delete 의 데이터 개수 반환 (psql)
-
-        result.data.article = rs.rows;
+        result.data.article = articleList;
 
         res.locals.result = result.data;
         res.status(200).send(result);
@@ -35,25 +30,29 @@ router.get('/all', async (req, res, next) => {
 });
 //게시글 자세히보기
 router.get(
-    '/:articleidx',
-
-    // param("articleidx").trim().notEmpty(),
+    '/:articleIdx',
+    validate([param('articleIdx').trim().notEmpty()]),
     async (req, res, next) => {
-        const articleidx = req.params.articleidx;
+        const articleIdx = req.params.articleIdx;
         const result = {
             data: {},
         };
 
         try {
-            const error = validationResult(req);
-            if (!error.isEmpty()) throw new Error('유효성검사 에러');
+            const articleQueryResult = await pool.query(
+                `SELECT a.idx, a.title, a.content, a.write_date, u.name 
+                FROM class.article a 
+                JOIN class.account u 
+                ON a.user_idx = u.idx 
+                WHERE a.idx = $1`,
+                [articleIdx]
+            );
 
-            const sql =
-                'SELECT a.idx, a.title, a.content, a.write_date, u.name FROM class.article a JOIN class.account u ON a.user_idx = u.idx WHERE a.idx = $1';
-            const values = [articleidx];
+            const selectedArticle = articleQueryResult.rows;
 
-            const rs = await pool.query(sql, values);
-            result.data.article = rs.rows;
+            if (!selectedArticle) throw new Error('해당게시글 없음');
+
+            result.data.article = selectedArticle;
 
             res.locals.result = result.data;
             res.status(200).send(result);
@@ -67,25 +66,20 @@ router.get(
 router.post(
     '/',
     loginCheck(),
-
-    [
-        body('title').trim().notEmpty().withMessage('제목 에러'),
-        body('content').trim().notEmpty(),
-    ],
+    validate([
+        body('title').trim().notEmpty().withMessage('제목 널값'),
+        body('content').trim().notEmpty().withMessage('내용 널값'),
+    ]),
     async (req, res, next) => {
         const { title, content } = req.body;
-        const useridx = req.user.idx
-
-        // const useridx = req.session.userIdx;
+        const user = req.user;
 
         try {
-            const error = validationResult(req);
-            if (!error.isEmpty()) throw new Error();
-
-            const sql = "INSERT INTO class.article(title,content,user_idx) VALUES ($1, $2, $3) ";
-            const values = [title, content, useridx];
-
-            await pool.query(sql, values)
+            await pool.query(
+                `INSERT INTO class.article(title,content,user_idx) 
+                VALUES ($1, $2, $3) , values)`,
+                [title, content, user.idx]
+            );
 
             res.status(200).send();
         } catch (e) {
@@ -96,27 +90,37 @@ router.post(
 
 //게시글 수정하기
 router.put(
-    '/:articleidx',
+    '/:articleIdx',
     loginCheck,
-    // param("articleidx").trim().notEmpty(),
-    body('title').trim().notEmpty(),
-    body('content').trim().notEmpty(),
-
+    validate([
+        param('articleIdx').trim().notEmpty(),
+        body('title').trim().notEmpty(),
+        body('content').trim().notEmpty(),
+    ]),
     async (req, res, next) => {
         const { title, content } = req.body;
-        // const useridx = req.session.userIdx;
-        const useridx = req.user.idx;
-        const articleidx = req.params.articleidx;
+        const user = req.user;
+        const articleIdx = req.params.articleIdx;
+        // const articleIdx = Number(req.query['article-idx']);
+
+        // GET /comment/all?idx=2
+        // GET /article/3/comment/4/reply-comment/all
 
         try {
-            const error = validationResult(req);
-            if (!error.isEmpty()) throw new Error('유효성검사 에러');
-
-            const sql =
-                'UPDATE class.article SET title = $1, content = $2 WHERE idx = $3 AND user_idx = $4'; //db에서도 유저 idx검사
-            const values = [title, content, articleidx, useridx];
-
-            await pool.query(sql, values);
+            await pool.query(
+                `
+                UPDATE 
+                    class.article 
+                SET 
+                    title = $1, 
+                    content = $2 
+                WHERE 
+                    idx = $3 
+                AND 
+                    user_idx = $4
+                `,
+                [title, content, articleIdx, useridx]
+            );
 
             res.locals.result = result.data;
             res.status(200).send();
@@ -128,25 +132,28 @@ router.put(
 
 //게시글 삭제하기
 router.delete(
-    '/:articleidx',
+    '/:articleIdx',
     loginCheck,
-    param('articleidx').trim().notEmpty(),
-
+    validate([param('articleIdx').trim().notEmpty()]),
     async (req, res, next) => {
         // const useridx = req.session.userIdx;
-        const useridx = req.user.idx;
-        const articleidx = req.params.articleidx;
+        const user = req.user;
+        const articleIdx = req.params.articleIdx;
 
         try {
-            const error = validationResult(req);
-            if (!error.isEmpty()) throw new Error('유효성검사 에러');
+            const deleteQueryResult = await pool.query(
+                `DELETE 
+                FROM class.article 
+                WHERE idx = $1 AND user_idx = $2
+                `,
+                [articleIdx, user.idx]
+            );
 
-            const sql =
-                'DELETE FROM class.article WHERE idx = $1 AND user_idx = $2';
-            const values = [articleidx, useridx];
-            const rs = await pool.query(sql, values);
+            console.log('deleteQueryResult: ', deleteQueryResult);
 
-            if (rs.rowCount == 0) throw new Error('일치하는 게시글 없습니다'); //굳이
+            const deletedArticle = deleteQueryResult.rowCount;
+
+            // if (!deletedArticle) throw new Error('일치하는 게시글 없음');
 
             res.locals.result = result.data;
             res.status(200).send();
@@ -158,36 +165,35 @@ router.delete(
 
 //게시글 검색하기
 router.get('/', loginCheck(), async (req, res, next) => {
-
     const { title } = req.query;
     const result = {
         data: {},
     };
-    const {idx} = req.user
+    const user = req.user;
 
     try {
-        const sql = `SELECT a.idx, title, write_date, u.name
+        const selectArticleSqlResult = await pool.query(
+            `SELECT a.idx, title, write_date, u.name
             FROM class.article a 
             JOIN class.account u ON a.user_idx = u.idx
             WHERE title LIKE '%' || $1 || '%' 
-            ORDER BY a.idx`; //orderby는 idx로하기!
-        const values = [title]
+            ORDER BY a.idx`,
+            [title]
+        );
 
-        const rs = await pool.query(sql, values);
+        const articleList = selectArticleSqlResult.rows
 
-        if (rs.rowCount == 0) throw new Error('게시글없음');
+        if (!articleList) throw new Error('게시글없음');
 
-        result.data.article = rs.rows;
+        result.data.article = articleList
 
         res.locals.result = result.data.article;
 
-
-        let searchHistory =  await recordSearchHistory(idx, title);
-        searchHistory = searchHistory.reverse()
-        result.data = searchHistory
+        let searchHistory = await recordSearchHistory(user.idx, title);
+        searchHistory = searchHistory.reverse();
+        result.data.searchHistory = searchHistory;
 
         res.status(200).send(result);
-
     } catch (e) {
         next(e);
     }

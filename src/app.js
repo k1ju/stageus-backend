@@ -1,6 +1,4 @@
 const express = require('express');
-const { pool } = require('./config/postgres');
-// const { logModel } = require('./config/mongodb');
 const { logger } = require('./middlewares/logger');
 
 const pageApi = require('./routers/page');
@@ -13,16 +11,16 @@ const cartApi = require('./routers/cart');
 
 const app = express();
 
-
 app.use(express.json());
 
-app.use('/', pageApi);
+
+app.use('/', logger ,pageApi);
 app.use('/account', logger, accountApi);
 app.use('/article', logger, articleApi);
 app.use('/comment', logger, commentRouter);
 app.use('/log', logApi);
-app.use('/clicker', clickerApi);
-app.use('/cart', cartApi);
+app.use('/clicker',logger , clickerApi);
+app.use('/cart', logger ,cartApi);
 
 app.use((req, res, next) => {
     next({

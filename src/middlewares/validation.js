@@ -8,25 +8,27 @@ const sessionCheck = (req, res, next) => {
 const validate = validations => {
     return async (req, res, next) => {
 
-        for (let validation of validations) {
-            const result = await validation.run(req)
-            if (result.errors.length) break;
+        try{
+
+            for (let validation of validations) {
+                const result = await validation.run(req)
+                if (result.errors.length) break;
+            }
+    
+            const errors = validationResult(req);  //체이닝된 조건식들을 비동기처리하여 run(req) 해준뒤, 그결과를 변수값에 validationResult(req)로 받아준다
+    
+            console.log("errors :::::: ",errors);
+            if (!errors.isEmpty()) throw new Error("유효성검사실패")
+            else next()
+
+        } catch(e) {
+            next(e)
         }
-
-        //체이닝된 조건식들을 비동기처리하여 run(req) 해준뒤, 그결과를 변수값에 validationResult(req)로 받아준다
-
-
-        const errors = validationResult(req);
-
-        console.log("errors :::::: ",errors);
-        if (!errors.isEmpty()) res.status(400).send();
-        else next()
     }
 }
 
 
 const userIDCheck = (req, res, next) => {
-
 
     const { userID } = req.body;
     const userIDregex = /^[a-zA-Z][a-zA-Z0-9]{0,19}$/

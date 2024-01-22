@@ -4,11 +4,11 @@ const env = require('../config/env');
 const loginCheck = (isAdminCheck) => {
     return async (req, res, next) => {
         const { token } = req.headers;
-        var tmp = isAdminCheck;
 
         try {
-            // if (isAdmin !== true) throw new Error("관리자 권한필요")
-            if (!token || token === '') throw new Error('no token');
+            //토큰에 넣는 것, 로그인체크 분리 -> 시도 기록 자체를 로그에 담을 수 있어야함. 
+            
+            if (!token) throw new Error('no token');
 
             const payload = jwt.verify(token, env.secretCode);
 

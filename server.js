@@ -1,6 +1,7 @@
 const app = require('./src/app');
 const env = require('./src/config/env');
 const { mongoDB } = require('./src/config/mongodb');
+const { pool } = require('./config/postgres');
 
 const main = async () => {
     app.listen(env.HTTP_PORT, '0.0.0.0', () => {
