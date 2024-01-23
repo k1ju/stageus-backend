@@ -156,7 +156,7 @@ router.get(
             const foundAccount = selectQueryResult.rows[0];
 
             if (!foundAccount) throw new Error('일치하는 id없음');
-            result.data.id = rs.rows[0].id.trim(); // id공백제거
+            result.data.id = foundAccount.id.trim(); // id공백제거
 
             res.locals.result = result.data;
             res.status(200).send();
@@ -191,7 +191,9 @@ router.get(
 
             const foundAccount = selectAccountSqlResult.rows[0];
 
-            if (foundAccount) throw new Error('일치하는 pw없음');
+            if (!foundAccount) throw new Error('일치하는 pw없음');
+            console.log('foundAccount: ', foundAccount);
+
 
             result.data.pw = foundAccount.pw.trim();
 
@@ -207,18 +209,20 @@ router.get(
 //내정보보기
 router.get('/info', loginCheck(), async (req, res, next) => {
     const user = req.user;
+    console.log('user: ', user);
     const result = {
         data: {},
     };
     try {
+        console.log(user.idx);
         const selectAccountSqlResult = await pool.query(
             `SELECT * FROM class.account WHERE idx = $1`,
-            [idx]
+            [user.idx]
         );
 
         const foundAccount = selectAccountSqlResult.rows[0];
 
-        if (foundAccount) throw new Error('일치하는 회원정보없음');
+        if (!foundAccount) throw new Error('일치하는 회원정보없음');
 
         result.data.idx = foundAccount.idx;
         result.data.name = foundAccount.name.trim(); //char타입에만 trim넣어줘야한다.
@@ -253,16 +257,17 @@ router.put(
         try {
             const selectPhonenumberSqlResult = await pool.query(
                 'SELECT phonenumber FROM class.account WHERE phonenumber = $1',
-                [userPhonenumber]
+                [user.userPhonenumber]
             );
 
-            const duplicatedPhonenumber = selectPhonenumberSqlResult;
+            const duplicatedPhonenumber = selectPhonenumberSqlResult.rows[0];
+            console.log('duplicatedPhonenumber: ', duplicatedPhonenumber);
 
             if (duplicatedPhonenumber) throw new Error('연락처 중복');
 
             await pool.query(
                 'UPDATE class.account SET name = $1, phonenumber = $2, birth = $3, profile = $4 WHERE idx = $5',
-                [userName, userPhonenumber, userBirth, profile, idx]
+                [userName, userPhonenumber, userBirth, profile, user.idx]
             );
 
             res.status(200).send();
@@ -274,12 +279,12 @@ router.put(
 
 //회원탈퇴
 router.delete('/', loginCheck(), async (req, res, next) => {
-    const idx = req.user.idx;
+    const user = req.user;
 
     try {
         await pool.query(
             'DELETE FROM class.account WHERE idx = $1', 
-            [idx]
+            [user.idx]
         );
 
         res.status(200).send();
