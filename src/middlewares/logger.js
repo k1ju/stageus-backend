@@ -23,10 +23,10 @@ const logger = (req, res, next) => {
             errMessage: res.locals.message // 스택트레이스도 넣기!
         })
 
-        // console.log("로그생성완료");
+        console.log("로그생성완료");
         // console.log(logData)
 
-        await logData.save();
+        logData.save();
 
 
     })

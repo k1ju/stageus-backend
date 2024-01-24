@@ -95,9 +95,14 @@ router.get(
             result.data.token = token;
             res.locals.result = result.data;
 
-            await visitorCount(userID);
+            await visitorCount(selectedAccount.idx, req.ip);
+
 
             res.status(200).send(result);
+
+            console.log("req.headers: ",req.headers);
+
+
         } catch (e) {
             next(e);
         }

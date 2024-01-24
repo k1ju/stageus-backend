@@ -17,7 +17,6 @@ const validate = validations => {
     
             const errors = validationResult(req);  //체이닝된 조건식들을 비동기처리하여 run(req) 해준뒤, 그결과를 변수값에 validationResult(req)로 받아준다
     
-            console.log("errors :::::: ",errors);
             if (!errors.isEmpty()) throw new Error("유효성검사실패")
             else next()
 

@@ -14,12 +14,6 @@ const psqlDBconfig = {
 
 const pool = new Pool(psqlDBconfig);
 
-// console.log('env.PSQL_HOST: ', env.PSQL_HOST);
-// console.log('env.PSQL_PORT: ', env.PSQL_PORT);
-// console.log('env.PSQL_USER: ', env.PSQL_USER);
-// console.log('env.PSQL_PW: ', env.PSQL_PW);
-// console.log('env.PSQL_DATABASE: ', env.PSQL_DATABASE);
-
 pool.query('SELECT now()')
     .then((result) => {
         console.log('pSQL db연결');
