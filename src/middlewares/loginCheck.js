@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
+const { visitorCount } = require('../modules/visitor.js');
+
 
 const loginCheck = (isAdminCheck) => {
     return async (req, res, next) => {
@@ -25,10 +27,12 @@ const loginCheck = (isAdminCheck) => {
 
             req.user = payload;
 
+            await visitorCount(payload.idx);
+
             next();
         } catch (e) {
             next(e);
-        }
+        } 
     };
 };
 

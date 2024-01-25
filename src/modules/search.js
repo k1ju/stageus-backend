@@ -1,5 +1,7 @@
 const redisClient = require('../config/redis')
 
+
+// 검색기록 레디스 저장
 const recordSearchHistory = async (idx, searchKeyword) => {
     //중복된 값이 있다면 가장 왼쪽으로 이동, // 5개초과는 삭제.
 
@@ -15,13 +17,29 @@ const recordSearchHistory = async (idx, searchKeyword) => {
             await redisClient.ZPOPMIN(`searchHistory${idx}`)
         }
 
-        const rs = await redisClient.zRange(`searchHistory${idx}`,0,-1,'WITHSCORES')
-        
-        return rs        
+            
 
     } catch (e) {
         console.log('에러발생', e);
     }
 };
 
-module.exports = recordSearchHistory;
+
+const getSearchHistory = async (idx) => {
+    try{
+
+        const rs = await redisClient.zRange(`searchHistory${idx}`,0,-1,'WITHSCORES')
+        
+        return rs    
+
+    }catch (e) {
+        console.log('에러발생', e);
+    }
+}
+
+
+
+
+module.exports = { recordSearchHistory,
+                    getSearchHistory,
+};

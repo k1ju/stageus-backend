@@ -3,7 +3,7 @@ const { pool } = require('../config/postgres.js');
 const { validate } = require('../middlewares/validation.js');
 const loginCheck = require('../middlewares/loginCheck.js');
 const { body, param } = require('express-validator');
-const recordSearchHistory = require('../modules/search.js');
+const { recordSearchHistory, getSearchHistory } = require('../modules/search.js');
 
 //게시글 목록 불러오기route
 router.get('/all', async (req, res, next) => {
@@ -181,11 +181,11 @@ router.get('/', loginCheck(), async (req, res, next) => {
             [title]
         );
 
-        const articleList = selectArticleSqlResult.rows
+        const articleList = selectArticleSqlResult.rows;
 
         if (!articleList) throw new Error('게시글없음');
 
-        result.data.article = articleList
+        result.data.article = articleList;
 
         res.locals.result = result.data.article;
 
@@ -198,5 +198,44 @@ router.get('/', loginCheck(), async (req, res, next) => {
         next(e);
     }
 });
+
+// 검색기록 api
+router.get('/', loginCheck(), async (req, res, next) => {
+    const { title } = req.query;
+    const result = {
+        data: {},
+    };
+    const user = req.user;
+
+    try {
+        const selectArticleSqlResult = await pool.query(
+            `SELECT a.idx, title, write_date, u.name
+            FROM class.article a 
+            JOIN class.account u ON a.user_idx = u.idx
+            WHERE title LIKE '%' || $1 || '%' 
+            ORDER BY a.idx`,
+            [title]
+        );
+
+        const articleList = selectArticleSqlResult.rows;
+
+        if (!articleList) throw new Error('게시글없음');
+
+        result.data.article = articleList;
+
+        res.locals.result = result.data.article;
+
+        let searchHistory = await recordSearchHistory(user.idx, title);
+        searchHistory = searchHistory.reverse();
+        result.data.searchHistory = searchHistory;
+
+        res.status(200).send(result);
+    } catch (e) {
+        next(e);
+    }
+});
+
+
+
 
 module.exports = router;

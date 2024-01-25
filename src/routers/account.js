@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const { pool } = require('../config/postgres.js'); // 풀 속성이 아닌 풀 객체를 받아오는 것이므로 {pool}이아닌 pool
 const { validate } = require('../middlewares/validation.js');
-const { visitorCount } = require('../modules/visitor.js');
 const redisClient = require('../config/redis');
 
 const { env } = require('../config/env.js');
@@ -95,13 +94,7 @@ router.get(
             result.data.token = token;
             res.locals.result = result.data;
 
-            await visitorCount(selectedAccount.idx, req.ip);
-
-
             res.status(200).send(result);
-
-            console.log("req.headers: ",req.headers);
-
 
         } catch (e) {
             next(e);
@@ -197,8 +190,6 @@ router.get(
             const foundAccount = selectAccountSqlResult.rows[0];
 
             if (!foundAccount) throw new Error('일치하는 pw없음');
-            console.log('foundAccount: ', foundAccount);
-
 
             result.data.pw = foundAccount.pw.trim();
 
@@ -214,12 +205,11 @@ router.get(
 //내정보보기
 router.get('/info', loginCheck(), async (req, res, next) => {
     const user = req.user;
-    console.log('user: ', user);
+
     const result = {
         data: {},
     };
     try {
-        console.log(user.idx);
         const selectAccountSqlResult = await pool.query(
             `SELECT * FROM class.account WHERE idx = $1`,
             [user.idx]
@@ -266,7 +256,6 @@ router.put(
             );
 
             const duplicatedPhonenumber = selectPhonenumberSqlResult.rows[0];
-            console.log('duplicatedPhonenumber: ', duplicatedPhonenumber);
 
             if (duplicatedPhonenumber) throw new Error('연락처 중복');
 
@@ -299,20 +288,30 @@ router.delete('/', loginCheck(), async (req, res, next) => {
 });
 
 router.get('/visitor', async (req, res, next) => {
+    const { year, month, day } = req.body;
     const result = {
         data: {},
     };
 
     try {
-        const today = new Date().toISOString().substring(0, 10);
 
-        let visitor = (await redisClient.sMembers(`visitor${today}`)) || 0;
-        let visitorNumber = await redisClient.sCard(`visitor${today}`);
+        console.log("방문자api시작");
 
-        result.data.visitor = visitor;
+        const visitorNumberSqlResult = await pool.query(`
+                    SELECT count(*)
+                    FROM class.visitor
+                    WHERE EXTRACT ( YEAR FROM visit_date ) = $1 
+                    AND   EXTRACT ( MONTH FROM visit_date ) = $2  
+                    AND   EXTRACT ( DAY FROM visit_date ) = $3
+                    `, [year, month, day] 
+        );
+
+        const visitorNumber = visitorNumberSqlResult.rows[0].count;
+
         result.data.visitorNumber = visitorNumber;
-
+        
         res.status(200).send(result);
+    
     } catch (e) {
         next(e);
     }
