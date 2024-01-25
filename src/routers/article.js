@@ -3,31 +3,74 @@ const { pool } = require('../config/postgres.js');
 const { validate } = require('../middlewares/validation.js');
 const loginCheck = require('../middlewares/loginCheck.js');
 const { body, param } = require('express-validator');
-const { recordSearchHistory, getSearchHistory } = require('../modules/search.js');
+const {
+    recordSearchHistory,
+    getSearchHistory,
+} = require('../modules/search.js');
 
-//게시글 목록 불러오기route
-router.get('/all', async (req, res, next) => {
+// GET /article/all
+// GET /article/all
+// POST /article
+// PUT /article/1
+// DELETE /article/2
+// GET /article/search/all?search=
+// GET /article/serach/histroy/all
+
+//게시글 검색route
+router.get('/search/all', loginCheck(), async (req, res, next) => {
     const result = {
         data: {},
     };
+    const { title } = req.query;
+    const user = req.user;
 
     try {
         const selectQueryResult = await pool.query(
             `SELECT a.idx, title, write_date, u.name
             FROM class.article a 
-            JOIN class.account u ON a.user_idx = u.idx 
-            ORDER BY a.idx`
+            JOIN class.account u ON a.user_idx = u.idx
+            WHERE title LIKE '%' || $1 || '%' 
+            ORDER BY a.idx`,
+            [title]
         );
         const articleList = selectQueryResult.rows;
 
         result.data.article = articleList;
 
         res.locals.result = result.data;
+
+        recordSearchHistory(user.idx, title);
+
         res.status(200).send(result);
     } catch (e) {
         next(e);
     }
 });
+// 검색기록 불러오기 api
+router.get('/search/history', loginCheck(), async (req, res, next) => {
+    console.log('api실행');
+
+    const result = {
+        data: {},
+    };
+    const user = req.user;
+
+    try {
+        const searchHistoryList = await getSearchHistory(user.idx);
+        console.log('searchHistoryList: ', searchHistoryList);
+
+        result.data.searchHistory = searchHistoryList;
+
+        res.locals.result = searchHistoryList;
+
+        // searchHistory = searchHistory.reverse();
+
+        res.status(200).send(result);
+    } catch (e) {
+        next(e);
+    }
+});
+
 //게시글 자세히보기
 router.get(
     '/:articleIdx',
@@ -153,7 +196,7 @@ router.delete(
 
             const deletedArticle = deleteQueryResult.rowCount;
 
-            // if (!deletedArticle) throw new Error('일치하는 게시글 없음');
+            if (!deletedArticle) throw new Error('일치하는 게시글 없음');
 
             res.locals.result = result.data;
             res.status(200).send();
@@ -162,80 +205,5 @@ router.delete(
         }
     }
 );
-
-//게시글 검색하기
-router.get('/', loginCheck(), async (req, res, next) => {
-    const { title } = req.query;
-    const result = {
-        data: {},
-    };
-    const user = req.user;
-
-    try {
-        const selectArticleSqlResult = await pool.query(
-            `SELECT a.idx, title, write_date, u.name
-            FROM class.article a 
-            JOIN class.account u ON a.user_idx = u.idx
-            WHERE title LIKE '%' || $1 || '%' 
-            ORDER BY a.idx`,
-            [title]
-        );
-
-        const articleList = selectArticleSqlResult.rows;
-
-        if (!articleList) throw new Error('게시글없음');
-
-        result.data.article = articleList;
-
-        res.locals.result = result.data.article;
-
-        let searchHistory = await recordSearchHistory(user.idx, title);
-        searchHistory = searchHistory.reverse();
-        result.data.searchHistory = searchHistory;
-
-        res.status(200).send(result);
-    } catch (e) {
-        next(e);
-    }
-});
-
-// 검색기록 api
-router.get('/', loginCheck(), async (req, res, next) => {
-    const { title } = req.query;
-    const result = {
-        data: {},
-    };
-    const user = req.user;
-
-    try {
-        const selectArticleSqlResult = await pool.query(
-            `SELECT a.idx, title, write_date, u.name
-            FROM class.article a 
-            JOIN class.account u ON a.user_idx = u.idx
-            WHERE title LIKE '%' || $1 || '%' 
-            ORDER BY a.idx`,
-            [title]
-        );
-
-        const articleList = selectArticleSqlResult.rows;
-
-        if (!articleList) throw new Error('게시글없음');
-
-        result.data.article = articleList;
-
-        res.locals.result = result.data.article;
-
-        let searchHistory = await recordSearchHistory(user.idx, title);
-        searchHistory = searchHistory.reverse();
-        result.data.searchHistory = searchHistory;
-
-        res.status(200).send(result);
-    } catch (e) {
-        next(e);
-    }
-});
-
-
-
 
 module.exports = router;

@@ -44,6 +44,8 @@ const visitorSave = async () => {
 
 const visitorCount = async (userIdx) => {
 
+    console.log("함수실행");
+
     try {
         await redisClient.sAdd(`visitor`, `${userIdx}`);
 

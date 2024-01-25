@@ -27,7 +27,6 @@ const recordSearchHistory = async (idx, searchKeyword) => {
 
 const getSearchHistory = async (idx) => {
     try{
-
         const rs = await redisClient.zRange(`searchHistory${idx}`,0,-1,'WITHSCORES')
         
         return rs    

@@ -10,7 +10,6 @@ const logger = (req, res, next) => {
     // }
 
     res.on('finish', async () => {
-        console.log("로그기록 시작")
 
         const logData = new logModel({
             method: req.method,
@@ -23,11 +22,7 @@ const logger = (req, res, next) => {
             errMessage: res.locals.message // 스택트레이스도 넣기!
         })
 
-        console.log("로그생성완료");
-        // console.log(logData)
-
         logData.save();
-
 
     })
     next();
