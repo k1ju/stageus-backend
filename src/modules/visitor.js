@@ -8,14 +8,10 @@ rule.minute = 0;
 rule.tz = ''
 
 
-
 //00:00마다 실행될코드
 //db에 날짜, 방문자수 저장, 없으면 패스
 
 const visitorSave = async () => {
-
-    console.log("00초 출력확인");
-    console.log("방문자저장 시작");
 
     const today = new Date().toISOString().slice(0, 10); // 오늘날짜
 
@@ -30,12 +26,7 @@ const visitorSave = async () => {
         );
     })
 
-    console.log('db 저장완료');
-
     redisClient.del(`visitor`);
-
-    const visitorList2 = await redisClient.sMembers('visitor')
-    console.log("지워진 방문자 리스트", visitorList2);
 
 };
 
@@ -43,8 +34,6 @@ const visitorSave = async () => {
 // 로그인할때마다 webVisitor 1씩추가, set이용
 
 const visitorCount = async (userIdx) => {
-
-    console.log("함수실행");
 
     try {
         await redisClient.sAdd(`visitor`, `${userIdx}`);

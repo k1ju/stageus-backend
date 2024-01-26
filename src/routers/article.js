@@ -3,10 +3,7 @@ const { pool } = require('../config/postgres.js');
 const { validate } = require('../middlewares/validation.js');
 const loginCheck = require('../middlewares/loginCheck.js');
 const { body, param } = require('express-validator');
-const {
-    recordSearchHistory,
-    getSearchHistory,
-} = require('../modules/search.js');
+const { recordSearchHistory, getSearchHistory } = require('../modules/search.js');
 
 // GET /article/all
 // GET /article/all
@@ -134,7 +131,7 @@ router.post(
 //게시글 수정하기
 router.put(
     '/:articleIdx',
-    loginCheck,
+    loginCheck(),
     validate([
         param('articleIdx').trim().notEmpty(),
         body('title').trim().notEmpty(),
@@ -162,10 +159,9 @@ router.put(
                 AND 
                     user_idx = $4
                 `,
-                [title, content, articleIdx, useridx]
+                [title, content, articleIdx, user.idx]
             );
 
-            res.locals.result = result.data;
             res.status(200).send();
         } catch (e) {
             next(e);
@@ -176,7 +172,7 @@ router.put(
 //게시글 삭제하기
 router.delete(
     '/:articleIdx',
-    loginCheck,
+    loginCheck(),
     validate([param('articleIdx').trim().notEmpty()]),
     async (req, res, next) => {
         // const useridx = req.session.userIdx;
@@ -198,7 +194,6 @@ router.delete(
 
             if (!deletedArticle) throw new Error('일치하는 게시글 없음');
 
-            res.locals.result = result.data;
             res.status(200).send();
         } catch (e) {
             next(e);

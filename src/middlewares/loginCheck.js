@@ -2,14 +2,17 @@ const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const { visitorCount } = require('../modules/visitor.js');
 
-
+/**
+ * @return {import('express').RequestHandler}
+ */
 const loginCheck = (isAdminCheck) => {
     return async (req, res, next) => {
-        const { token } = req.headers;
+        // const [type, token] = req.headers.authorization.split(' ');
+        const token = req.headers.token;
 
         try {
-            //토큰에 넣는 것, 로그인체크 분리 -> 시도 기록 자체를 로그에 담을 수 있어야함. 
-            
+            //토큰에 넣는 것, 로그인체크 분리 -> 시도 기록 자체를 로그에 담을 수 있어야함.
+            // if (type !== 'Bearer') throw new Error('invalid token type');
             if (!token) throw new Error('no token');
 
             const payload = jwt.verify(token, env.secretCode);
@@ -32,7 +35,7 @@ const loginCheck = (isAdminCheck) => {
             next();
         } catch (e) {
             next(e);
-        } 
+        }
     };
 };
 

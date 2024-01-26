@@ -91,6 +91,7 @@ router.get(
                 }
             );
 
+
             result.data.token = token;
             res.locals.result = result.data;
 
@@ -287,6 +288,7 @@ router.delete('/', loginCheck(), async (req, res, next) => {
     }
 });
 
+//방문자 조회
 router.get('/visitor', async (req, res, next) => {
     const { year, month, day } = req.body;
     const result = {
@@ -294,8 +296,6 @@ router.get('/visitor', async (req, res, next) => {
     };
 
     try {
-
-        console.log("방문자api시작");
 
         const visitorNumberSqlResult = await pool.query(`
                     SELECT count(*)

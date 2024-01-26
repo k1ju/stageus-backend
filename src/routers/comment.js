@@ -7,20 +7,20 @@ const { body, param } = require('express-validator');
 //댓글쓰기
 commentRouter.post(
     '/',
-    loginCheck,
+    loginCheck(),
     validate([
-        body('title').trim().notEmpty(),
+        body('articleIdx').trim().notEmpty(),
         body('content').trim().notEmpty(),
     ]),
 
     async (req, res, next) => {
-        const { articleidx, content } = req.body;
+        const { articleIdx, content } = req.body;
         const user = req.user;
 
         try {
             await pool.query(
-                'INSERT INTO class.comment(content, user_idx, article_idx) VALUES ($1, $2, $3) , values)',
-                [content, user.idx, articleidx]
+                'INSERT INTO class.comment(content, user_idx, article_idx) VALUES ($1, $2, $3)',
+                [content, user.idx, articleIdx]
             )
 
             res.status(200).send();
@@ -65,7 +65,7 @@ commentRouter.get(
 //댓글수정하기
 commentRouter.put(
     '/:commentIdx',
-    loginCheck,
+    loginCheck(),
     validate([
         body('content').trim().notEmpty(),
         param('commentIdx').trim().notEmpty(),
@@ -90,7 +90,7 @@ commentRouter.put(
 //댓글삭제하기
 commentRouter.delete(
     '/:commentIdx',
-    loginCheck,
+    loginCheck(),
     validate([
         param('commentIdx').trim().notEmpty()
     ]),
