@@ -158,7 +158,7 @@ router.get(
             result.data.id = foundAccount.id.trim(); // id공백제거
 
             res.locals.result = result.data;
-            res.status(200).send();
+            res.status(200).send(result);
         } catch (e) {
             next(e);
         }
@@ -196,7 +196,7 @@ router.get(
 
             res.locals.result = result.data;
 
-            res.status(200).send();
+            res.status(200).send(result);
         } catch (e) {
             next(e);
         }
@@ -253,11 +253,11 @@ router.put(
         try {
             const selectPhonenumberSqlResult = await pool.query(
                 'SELECT phonenumber FROM class.account WHERE phonenumber = $1',
-                [user.userPhonenumber]
+                [userPhonenumber]
             );
+            console.log('selectPhonenumberSqlResult: ', selectPhonenumberSqlResult);
 
             const duplicatedPhonenumber = selectPhonenumberSqlResult.rows[0];
-
             if (duplicatedPhonenumber) throw new Error('연락처 중복');
 
             await pool.query(
