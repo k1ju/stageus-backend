@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
+
 const { visitorCount } = require('../modules/visitor.js');
 
 /**
@@ -16,7 +17,6 @@ const loginCheck = (isAdminCheck) => {
             if (!token) throw new Error('no token');
 
             const payload = jwt.verify(token, env.secretCode);
-
             if (isAdminCheck) {
                 // 관리자 권한 체크가 필요하다면
 

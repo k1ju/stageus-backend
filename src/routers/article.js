@@ -4,14 +4,25 @@ const { validate } = require('../middlewares/validation.js');
 const loginCheck = require('../middlewares/loginCheck.js');
 const { body, param } = require('express-validator');
 const { recordSearchHistory, getSearchHistory } = require('../modules/search.js');
+const multer = require('multer');
+const path = require('path');
 
-// GET /article/all
-// GET /article/all
-// POST /article
-// PUT /article/1
-// DELETE /article/2
-// GET /article/search/all?search=
-// GET /article/serach/histroy/all
+// const upload = multer({ dest: 'uploads/', limits: { fileSize: 5 * 1024 * 1024 } });
+// router.post('/', upload.single('photos'), (req, res) => {
+//   console.log(req.file); 
+// });
+
+const upload = multer({
+    storage : multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, 'files/');
+        },
+        filename: (req, file, cb) => {
+            cb(null, file.originalname);
+        }
+    }),
+})
+
 
 //게시글 검색route
 router.get('/search/all', loginCheck(), async (req, res, next) => {
@@ -106,20 +117,28 @@ router.get(
 router.post(
     '/',
     loginCheck(),
-    validate([
-        body('title').trim().notEmpty().withMessage('제목 널값'),
-        body('content').trim().notEmpty().withMessage('내용 널값'),
-    ]),
+    // validate([
+    //     body('title').trim().notEmpty().withMessage('제목 널값'),
+    //     body('content').trim().notEmpty().withMessage('내용 널값'),
+    // ]),
+    upload.array('photos', 3),
     async (req, res, next) => {
-        const { title, content } = req.body;
+
+        const { title, content } = JSON.parse(req.body.data);
+        console.log('content: ', content);
+        console.log('title: ', title);
         const user = req.user;
+
+
 
         try {
             await pool.query(
                 `INSERT INTO class.article(title,content,user_idx) 
-                VALUES ($1, $2, $3) , values)`,
+                VALUES ($1, $2, $3)`,
                 [title, content, user.idx]
             );
+
+            console.log('req.files: ', req.files);
 
             res.status(200).send();
         } catch (e) {

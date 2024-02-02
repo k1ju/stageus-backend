@@ -1,20 +1,11 @@
 const router = require('express').Router();
 const { pool } = require('../config/postgres.js'); // 풀 속성이 아닌 풀 객체를 받아오는 것이므로 {pool}이아닌 pool
 const { validate } = require('../middlewares/validation.js');
-const redisClient = require('../config/redis');
-
-const { env } = require('../config/env.js');
+const env = require('../config/env.js');
 const jwt = require('jsonwebtoken');
 const loginCheck = require('../middlewares/loginCheck');
 const { body } = require('express-validator');
-const loginUser = require('../modules/loginUser.js');
 
-// 예외처리도 미들웨어처리
-// 예외처리 fit하지않게 체이닝기법 .isnull.islengthCheck
-
-//참고블로그: https://velog.io/@younoah/nodejs-express-validator
-
-//api에서도 next이용
 // 회원가입 api
 router.post(
     '/',
@@ -84,7 +75,7 @@ router.get(
                     idx: selectedAccount.idx,
                     isadmin: selectedAccount.isadmin,
                 },
-                process.env.secretCode,
+                env.secretCode,
                 {
                     issuer: 'stageus',
                     expiresIn: '30m',
