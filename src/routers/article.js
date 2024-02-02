@@ -3,26 +3,23 @@ const { pool } = require('../config/postgres.js');
 const { validate } = require('../middlewares/validation.js');
 const loginCheck = require('../middlewares/loginCheck.js');
 const { body, param } = require('express-validator');
-const { recordSearchHistory, getSearchHistory } = require('../modules/search.js');
+const {
+    recordSearchHistory,
+    getSearchHistory,
+} = require('../modules/search.js');
 const multer = require('multer');
 const path = require('path');
 
-// const upload = multer({ dest: 'uploads/', limits: { fileSize: 5 * 1024 * 1024 } });
-// router.post('/', upload.single('photos'), (req, res) => {
-//   console.log(req.file); 
-// });
-
 const upload = multer({
-    storage : multer.diskStorage({
+    storage: multer.diskStorage({
         destination: (req, file, cb) => {
-            cb(null, 'files/');
+            cb(null, 'uploads/');
         },
         filename: (req, file, cb) => {
-            cb(null, file.originalname);
-        }
+            cb(null, new Date().getTime() + path.extname(file.originalname));
+        },
     }),
-})
-
+});
 
 //게시글 검색route
 router.get('/search/all', loginCheck(), async (req, res, next) => {
@@ -123,13 +120,10 @@ router.post(
     // ]),
     upload.array('photos', 3),
     async (req, res, next) => {
-
         const { title, content } = JSON.parse(req.body.data);
         console.log('content: ', content);
         console.log('title: ', title);
         const user = req.user;
-
-
 
         try {
             await pool.query(
