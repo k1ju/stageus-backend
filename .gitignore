@@ -3,3 +3,5 @@ keys/
 .env
 
 node_modules/
+
+uploads/

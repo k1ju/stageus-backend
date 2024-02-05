@@ -16,7 +16,7 @@ const upload = multer({
             cb(null, 'uploads/');
         },
         filename: (req, file, cb) => {
-            cb(null, new Date().getTime() + path.extname(file.originalname));
+            cb(null, new Date().getTime() + '_' + file.originalname);
         },
     }),
 });
@@ -111,6 +111,7 @@ router.get(
 );
 
 //게시글 작성하기
+//ㄴ 게시글테이블에
 router.post(
     '/',
     loginCheck(),
@@ -118,21 +119,53 @@ router.post(
     //     body('title').trim().notEmpty().withMessage('제목 널값'),
     //     body('content').trim().notEmpty().withMessage('내용 널값'),
     // ]),
-    upload.array('photos', 3),
+    upload.array('files', 3),
     async (req, res, next) => {
         const { title, content } = JSON.parse(req.body.data);
-        console.log('content: ', content);
-        console.log('title: ', title);
         const user = req.user;
 
+        // const timestamp = new Date().getTime();
+
         try {
-            await pool.query(
+            const articleInsertQuerqyResult = await pool.query(
                 `INSERT INTO class.article(title,content,user_idx) 
                 VALUES ($1, $2, $3)`,
                 [title, content, user.idx]
             );
 
-            console.log('req.files: ', req.files);
+            console.log('insertQuerqyResult: ', articleInsertQuerqyResult);
+            
+            const getLastArticleIdxQueryResult = await pool.query(
+                `SELECT MAX(idx) FROM class.article`
+                );
+
+            const LastArticleIdx = getLastArticleIdxQueryResult.rows[0].max;
+            console.log('LastArticleIdx: ', LastArticleIdx);
+
+            let sequence = 0;
+
+            // await req.files.forEach( async (elem) => {
+
+            for(let i=0; i<req.files.length; i++){
+
+                console.log("sequence", i);
+
+                const destination = elem.destination;
+                const filename = elem.filename;
+                const size = elem.size;
+
+                console.log('sequence: ', sequence);
+
+                await pool.query(`
+                    INSERT INTO class.upload(path, name, size, article_idx, sequence)
+                    VALUES ($1, $2, $3, $4, $5)`,
+                    [destination, filename, size, LastArticleIdx, i]
+                );
+
+                // sequence ++;
+            }
+                // })
+
 
             res.status(200).send();
         } catch (e) {
