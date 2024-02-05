@@ -9,8 +9,6 @@ const logApi = require('./routers/log');
 const clickerApi = require('./routers/clicker');
 const cartApi = require('./routers/cart');
 
-
-
 const app = express();
 
 app.use(express.json());
