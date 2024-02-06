@@ -98,7 +98,7 @@ router.get(
                 ORDER BY sequence`,
                 [articleIdx]
             );
-
+ 
             const uploads = uploadQueryResult.rows;
 
             result.data.article = selectedArticle;
