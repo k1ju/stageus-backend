@@ -1,54 +1,14 @@
 const router = require('express').Router();
 const { pool } = require('../config/postgres.js');
 const { validate } = require('../middlewares/validation.js');
-const env = require('../config/env.js');
-console.log('env: ', env);
 const loginCheck = require('../middlewares/loginCheck.js');
 const { body, param } = require('express-validator');
 const {
     recordSearchHistory,
     getSearchHistory,
 } = require('../modules/search.js');
-const { PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
-const multer = require('multer');
-const multerS3 = require('multer-s3');
+const {upload, S3upload} = require('../middlewares/upload.js')
 
-//db저장 multer
-// const upload = multer({
-//     storage: multer.diskStorage({
-//         destination: (req, file, cb) => {
-//             cb(null, 'uploads/');
-//         },
-//         filename: (req, file, cb) => {
-//             cb(null, new Date().getTime() + '_' + file.originalname);
-//         },
-//     }),
-// });
-
-const S3 = new S3Client({
-    region: env.AWS_BUCKET_REGION,
-    credentials:{
-        accessKeyId: env.AWS_ACCESS_KEY,
-        secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-    }
-
-});
-
-//S3저장 multer
-const S3upload = multer({
-    storage: multerS3({
-        s3: S3,
-        bucket: env.AWS_BUCKET_NAME,
-        // metadata: (req, file, cb) => {
-        //     cb(null, {
-        //         fieldname: file.fieldname,
-        //     });
-        // },
-        key: (req, file, cb) => {
-            cb(null, new Date().getTime().toString());
-        },
-    }),
-});
 
 //게시글 검색route
 router.get('/search/all', loginCheck(), async (req, res, next) => {
@@ -125,7 +85,7 @@ router.get(
                 [articleIdx]
             );
 
-            const selectedArticle = articleQueryResult.rows;
+            const selectedArticle = articleQueryResult.rows[0];
 
             if (!selectedArticle) throw new Error('해당게시글 없음');
 
@@ -141,9 +101,9 @@ router.get(
 
             const uploads = uploadQueryResult.rows;
 
-            result.data.uploads = uploads;
-
             result.data.article = selectedArticle;
+
+            result.data.article.upload = uploads;
 
             res.locals.result = result.data;
             res.status(200).send(result);
@@ -178,6 +138,9 @@ router.get(
 //             const getLastArticleIdxQueryResult = await pool.query(
 //                 `SELECT MAX(idx) FROM class.article`
 //             );
+
+//             const LastArticleIdx = getLastArticleIdxQueryResult.rows[0].max;
+//             console.log('LastArticleIdx: ', LastArticleIdx);
 
 //             let destination;
 //             let filename;
@@ -218,19 +181,14 @@ router.post(
         const { title, content } = JSON.parse(req.body.data);
         const user = req.user;
 
-        let filename;
-
-        let objectParams;
         for (let i = 0; i < req.files.length; i++) {
             filename = req.files[0].filename;
 
-            console.log('req.files: ', req.files[i]);
-
             const main = async () => {
                 const command = new PutObjectCommand({
-                    Bucket: 'stageuskiju',
+                    Bucket: 'stageuskiju/upload/',
                     Key: req.files[0].filename,
-                    Body: 'Hello S3!',
+                    Body: req.files[0],
                 });
 
                 const response = await client.send(command);
@@ -244,11 +202,12 @@ router.post(
                 [title, content, user.idx]
             );
 
-            console.log('insertQuerqyResult: ', articleInsertQuerqyResult);
-
             const getLastArticleIdxQueryResult = await pool.query(
                 `SELECT MAX(idx) FROM class.article`
             );
+
+            const LastArticleIdx = getLastArticleIdxQueryResult.rows[0].max;
+            console.log('LastArticleIdx: ', LastArticleIdx);
 
             let destination;
             let filename;
