@@ -28,12 +28,12 @@ const S3upload = multer({
     storage: multerS3({
         s3: S3,
         bucket: env.AWS_BUCKET_NAME,
-        metadata: function (req, file, cb) {
-            cb(null, {fieldName: file.fieldname});
-          },
+        acl: 'public-read',
+        contentType: multerS3.AUTO_CONTENT_TYPE,
         key: (req, file, cb) => {
-            cb(null, new Date().getTime().toString());
-        }
+            cb(null, `upload/${new Date().getTime().toString() + '_' + file.originalname}`);
+        },
+        limits: {fileSize : 5 * 1024 * 1024 }
     })
 });
 

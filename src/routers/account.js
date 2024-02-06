@@ -25,7 +25,9 @@ router.post(
 
         try {
             const selectAccountSqlResult = await pool.query(
-                `SELECT id, phonenumber FROM class.account WHERE id = $1 OR phonenumber = $2`,
+                `SELECT id, phonenumber 
+                FROM class.account 
+                WHERE id = $1 OR phonenumber = $2`,
                 [userID, userPhonenumber]
             );
 
@@ -62,7 +64,9 @@ router.get(
         try {
             const selectAccountSqlResult = await pool.query(
                 // pool.query에는 내부적으로 커넥션을 acquire, release하는 작업이 포함되어있다.
-                `SELECT idx, isadmin FROM class.account WHERE id = $1 AND pw = $2`,
+                `SELECT idx, isadmin 
+                FROM class.account 
+                WHERE id = $1 AND pw = $2`,
                 [userID, userPw]
             );
 

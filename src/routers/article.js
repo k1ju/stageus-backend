@@ -24,7 +24,7 @@ router.get('/search/all', loginCheck(), async (req, res, next) => {
             FROM class.article a 
             JOIN class.account u ON a.user_idx = u.idx
             WHERE title LIKE '%' || $1 || '%' 
-            ORDER BY a.idx`,
+            ORDER BY a.idx DESC`,
             [title]
         );
         const articleList = selectQueryResult.rows;
@@ -168,6 +168,7 @@ router.get(
 //     }
 // );
 
+
 // 게시글작성하기 - S3에 저장
 router.post(
     '/',
@@ -178,7 +179,8 @@ router.post(
     // ]),
     S3upload.array('files', 3),
     async (req, res, next) => {
-        const { title, content } = JSON.parse(req.body.data);
+        const { title, content } = req.body;
+        console.log('title: ', title);
         const user = req.user;
 
         for (let i = 0; i < req.files.length; i++) {
@@ -186,8 +188,8 @@ router.post(
 
             const main = async () => {
                 const command = new PutObjectCommand({
-                    Bucket: 'stageuskiju/upload/',
-                    Key: req.files[0].filename,
+                    Bucket: 'stageuskiju',
+                    Key: req.files[0].originalname,
                     Body: req.files[0],
                 });
 
@@ -209,6 +211,70 @@ router.post(
             const LastArticleIdx = getLastArticleIdxQueryResult.rows[0].max;
             console.log('LastArticleIdx: ', LastArticleIdx);
 
+            let location;
+            let filename;
+            let size;
+            let sequence;
+
+            for (let i = 0; i < req.files.length; i++) {
+
+                console.log("req.files : ", req.files[0]);
+
+                location = req.files[i].location;
+                filename = req.files[i].key.split('/')[1];
+                console.log('filename: ', filename);
+                size = req.files[i].size;
+                sequence = i;
+
+                await pool.query(
+                    `INSERT INTO class.upload(path, name, size, article_idx, sequence)
+                    VALUES ($1, $2, $3, $4, $5)`,
+                    [location, filename, size, LastArticleIdx, sequence]
+                );
+            }
+
+            res.status(200).send();
+        } catch (e) {
+            next(e);
+        }
+    }
+);
+
+//게시글 수정하기
+router.put(
+    '/:articleIdx',
+    loginCheck(),
+    // validate([
+    //     param('articleIdx').trim().notEmpty(),
+    //     body('title').trim().notEmpty(),
+    //     body('content').trim().notEmpty(),
+    // ]),
+    upload.array('files', 3),
+    async (req, res, next) => {
+        const { title, content } = JSON.parse(req.body.data);
+        const user = req.user;
+        const articleIdx = req.params.articleIdx;
+        // const articleIdx = Number(req.query['article-idx']);
+
+        // GET /comment/all?idx=2
+        // GET /article/3/comment/4/reply-comment/all
+
+        try {
+            await pool.query(
+                `UPDATE class.article
+                SET title = $1, content = $2
+                WHERE idx = $3
+                AND user_idx = $4`,
+                [title, content, articleIdx, user.idx]
+            );
+
+            await pool.query(
+                `DELETE
+                FROM class.upload
+                WHERE article_idx = $1`,
+                [articleIdx]
+            );
+
             let destination;
             let filename;
             let size;
@@ -224,7 +290,7 @@ router.post(
                     `
                     INSERT INTO class.upload(path, name, size, article_idx, sequence)
                     VALUES ($1, $2, $3, $4, $5)`,
-                    [destination, filename, size, LastArticleIdx, sequence]
+                    [destination, filename, size, articleIdx, sequence]
                 );
             }
 
@@ -234,67 +300,6 @@ router.post(
         }
     }
 );
-
-//게시글 수정하기
-// router.put(
-//     '/:articleIdx',
-//     loginCheck(),
-//     // validate([
-//     //     param('articleIdx').trim().notEmpty(),
-//     //     body('title').trim().notEmpty(),
-//     //     body('content').trim().notEmpty(),
-//     // ]),
-//     upload.array('files', 3),
-//     async (req, res, next) => {
-//         const { title, content } = JSON.parse(req.body.data);
-//         const user = req.user;
-//         const articleIdx = req.params.articleIdx;
-//         // const articleIdx = Number(req.query['article-idx']);
-
-//         // GET /comment/all?idx=2
-//         // GET /article/3/comment/4/reply-comment/all
-
-//         try {
-//             await pool.query(
-//                 `UPDATE class.article
-//                 SET title = $1, content = $2
-//                 WHERE idx = $3
-//                 AND user_idx = $4`,
-//                 [title, content, articleIdx, user.idx]
-//             );
-
-//             await pool.query(
-//                 `DELETE
-//                 FROM class.upload
-//                 WHERE article_idx = $1`,
-//                 [articleIdx]
-//             );
-
-//             let destination;
-//             let filename;
-//             let size;
-//             let sequence;
-
-//             for (let i = 0; i < req.files.length; i++) {
-//                 destination = req.files[i].destination;
-//                 filename = req.files[i].filename;
-//                 size = req.files[i].size;
-//                 sequence = i;
-
-//                 await pool.query(
-//                     `
-//                     INSERT INTO class.upload(path, name, size, article_idx, sequence)
-//                     VALUES ($1, $2, $3, $4, $5)`,
-//                     [destination, filename, size, articleIdx, sequence]
-//                 );
-//             }
-
-//             res.status(200).send();
-//         } catch (e) {
-//             next(e);
-//         }
-//     }
-// );
 
 //게시글 삭제하기
 router.delete(
