@@ -31,11 +31,19 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
     if (!err.status) err.status = 500;
 
-    console.log('err.message : ', err.message);
+console.log("thisis error stack start");
 
-    res.locals.message = err.message;
+console.log("this is error stack : ", err.stack);
 
-    res.status(err.status).send({ message: err.message });
+console.log("thisis error stack end");
+
+    // console.log('err.message : ', err.stack);
+
+    res.locals.message = err.stack;
+
+    // next(err);
+
+    res.status(err.status).send(err.stack);
 });
 
 module.exports = app;

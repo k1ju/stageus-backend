@@ -7,8 +7,7 @@ const {
     recordSearchHistory,
     getSearchHistory,
 } = require('../modules/search.js');
-const {upload, S3upload} = require('../middlewares/upload.js')
-
+const { upload, S3upload } = require('../middlewares/upload.js');
 
 //게시글 검색route
 router.get('/search/all', loginCheck(), async (req, res, next) => {
@@ -42,7 +41,6 @@ router.get('/search/all', loginCheck(), async (req, res, next) => {
 });
 // 검색기록 불러오기 api
 router.get('/search/history', loginCheck(), async (req, res, next) => {
-    console.log('api실행');
 
     const result = {
         data: {},
@@ -51,7 +49,6 @@ router.get('/search/history', loginCheck(), async (req, res, next) => {
 
     try {
         const searchHistoryList = await getSearchHistory(user.idx);
-        console.log('searchHistoryList: ', searchHistoryList);
 
         result.data.searchHistory = searchHistoryList;
 
@@ -98,7 +95,7 @@ router.get(
                 ORDER BY sequence`,
                 [articleIdx]
             );
- 
+
             const uploads = uploadQueryResult.rows;
 
             result.data.article = selectedArticle;
@@ -168,7 +165,6 @@ router.get(
 //     }
 // );
 
-
 // 게시글작성하기 - S3에 저장
 router.post(
     '/',
@@ -180,22 +176,7 @@ router.post(
     S3upload.array('files', 3),
     async (req, res, next) => {
         const { title, content } = req.body;
-        console.log('title: ', title);
         const user = req.user;
-
-        for (let i = 0; i < req.files.length; i++) {
-            filename = req.files[0].filename;
-
-            const main = async () => {
-                const command = new PutObjectCommand({
-                    Bucket: 'stageuskiju',
-                    Key: req.files[0].originalname,
-                    Body: req.files[0],
-                });
-
-                const response = await client.send(command);
-            };
-        }
 
         try {
             const articleInsertQuerqyResult = await pool.query(
@@ -209,7 +190,6 @@ router.post(
             );
 
             const LastArticleIdx = getLastArticleIdxQueryResult.rows[0].max;
-            console.log('LastArticleIdx: ', LastArticleIdx);
 
             let location;
             let filename;
@@ -218,11 +198,8 @@ router.post(
 
             for (let i = 0; i < req.files.length; i++) {
 
-                console.log("req.files : ", req.files[0]);
-
                 location = req.files[i].location;
                 filename = req.files[i].key.split('/')[1];
-                console.log('filename: ', filename);
                 size = req.files[i].size;
                 sequence = i;
 
@@ -319,8 +296,6 @@ router.delete(
                 `,
                 [articleIdx, user.idx]
             );
-
-            console.log('deleteQueryResult: ', deleteQueryResult);
 
             const deletedArticle = deleteQueryResult.rowCount;
 

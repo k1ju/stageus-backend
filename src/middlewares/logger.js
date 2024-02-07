@@ -19,6 +19,7 @@ const logger = (req, res, next) => {
             status: res.statusCode,
             errMessage: res.locals.message, // 스택트레이스도 넣기!
         });
+
         logData.save();
     });
     next();

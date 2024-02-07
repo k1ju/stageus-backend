@@ -1,7 +1,7 @@
 const env = require('../config/env.js');
-const { PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
+const { S3 } = require('../config/aws.js')
 
 //db저장 multer
 const upload = multer({
@@ -15,13 +15,6 @@ const upload = multer({
     }),
 });
 
-const S3 = new S3Client({
-    region: env.AWS_BUCKET_REGION,
-    credentials: {
-        accessKeyId: env.AWS_ACCESS_KEY,
-        secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-    },
-});
 
 //S3저장 multer
 const S3upload = multer({

@@ -4,7 +4,7 @@ const env = require('../config/env');
 const { visitorCount } = require('../modules/visitor.js');
 
 /**
- * @return {import('express').RequestHandler}
+return {import('express').RequestHandler}
  */
 const loginCheck = (isAdminCheck) => {
     return async (req, res, next) => {
