@@ -59,6 +59,7 @@ router.get('/search/history', loginCheck(), async (req, res, next) => {
         res.status(200).send(result);
     } catch (e) {
         next(e);
+
     }
 });
 

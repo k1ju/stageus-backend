@@ -90,7 +90,11 @@ router.get(
             result.data.token = token;
             res.locals.result = result.data;
 
+            console.log("api 실행완료1");
+
             res.status(200).send(result);
+
+            console.log("api 실행완료2");
 
         } catch (e) {
             next(e);

@@ -6,7 +6,6 @@ const loginCheck = require("../middlewares/loginCheck");
 //모든로그 불러오기
 router.get('/all', loginCheck("isAdminCheck") ,async (req, res, next) => {
 
-    console.log("api실행")
     const result = {
         "data": {}
     }
@@ -17,7 +16,6 @@ router.get('/all', loginCheck("isAdminCheck") ,async (req, res, next) => {
 
         result.data = logs
 
-        console.log(logs)
         res.status(200).send(result)
     } catch (e) {
         next(e);
@@ -27,7 +25,6 @@ router.get('/all', loginCheck("isAdminCheck") ,async (req, res, next) => {
 //특정id 로그 불러오기
 router.get('/id', loginCheck("isAdminCheck"), async (req, res, next) => {
 
-    console.log("api실행")
     const { userID } = req.query
     const result = {
         "data": {}
@@ -39,7 +36,6 @@ router.get('/id', loginCheck("isAdminCheck"), async (req, res, next) => {
 
         result.data = logs
 
-        console.log(logs)
         res.status(200).send(result)
     } catch (e) {
         next(e);
@@ -48,17 +44,15 @@ router.get('/id', loginCheck("isAdminCheck"), async (req, res, next) => {
 // 특정 기간 로그 불러오기
 router.get('/time', async (req, res, next) => {
 
-    const minTime = req.query.minTime;
-    const maxTime = req.query.maxTime || new Date();
+    const minTime = req.body.minTime;
+    const maxTime = req.body.maxTime || new Date();
     const result = {
         "data": {}
     }
 
     try {
-        console.log(maxTime);
 
         const sql = { "timestamp": { '$gte': new Date(minTime), "$lte": new Date(maxTime) } }
-        console.log(sql)
         const logs = await logModel.find(sql).sort({timestamp: -1});
 
         result.data = logs
@@ -79,8 +73,6 @@ router.get('/url', async (req, res, next) => {
     }
 
     try {
-        console.log("method: ", method);
-        console.log("url: ", url);
 
         let sql;
         if (method && url) {
@@ -89,11 +81,9 @@ router.get('/url', async (req, res, next) => {
             sql = { "$or": [{ "method": method }, { "url": { "$regex": `^${url}` } }] }
         }
 
-        console.log("sql:", sql)
         const logs = await logModel.find(sql).sort({timestamp: -1});
 
         result.data = logs
-        console.log(logs)
 
         res.status(200).send(result)
     } catch (e) {
@@ -116,7 +106,6 @@ router.delete('/', async (req, res, next) => {
 
         result.data = logs
 
-        console.log(logs)
         res.status(200).send(result)
     } catch (e) {
         next(e);

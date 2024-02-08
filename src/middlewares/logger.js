@@ -1,11 +1,9 @@
 const { logModel } = require('../config/mongodb');
 
-const logger = (req, res, next) => {
-    // const oldSend = res.send;
-    // res.send = (result) => {
-    //     res.locals.result = result;
-    //     return oldSend.apply(res, [result]);
-    // }
+console.log("currentDate :", new Date().toISOString());
+
+
+const logger = async (req, res, next) => {
 
     res.on('finish', async () => {
         console.log('로그 기록 시작');
@@ -15,12 +13,16 @@ const logger = (req, res, next) => {
             userIP: req.ip,
             // userID: req.user.userID,
             request: req.body,
-            response: res.locals.result,
+            response: res.locals.result, 
             status: res.statusCode,
-            errMessage: res.locals.message, // 스택트레이스도 넣기!
+            errMessage: res.locals.message,
+            timestamp: new Date()
         });
+        console.log("logData : ", logData);
+        console.log("currentDate :", new Date().toISOString());
 
         logData.save();
+
     });
     next();
 };

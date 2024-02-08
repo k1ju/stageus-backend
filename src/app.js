@@ -13,7 +13,7 @@ const app = express();
 
 app.use(express.json());
 
-app.use('/', logger ,pageApi);
+app.use('/' ,pageApi);
 app.use('/account', logger, accountApi);
 app.use('/article', logger, articleApi);
 app.use('/comment', logger, commentRouter);
